@@ -52,13 +52,16 @@ public:
     SDL_AppResult HandleEvent(SDL_Event *event) override;
     void Update(float deltaTime) override;
     void Render() override;
-    Mix_Chunk *moveSound{nullptr};
-    Mix_Chunk *enterSound{nullptr};
+    MIX_Audio *moveSound{nullptr};
+    MIX_Audio *enterSound{nullptr};
+    MIX_Track *track1;
+    MIX_Track *track2;
 
 private:
     SDL_Texture *messageTex{nullptr};
     SDL_Texture *imageTex{nullptr};
-    Mix_Music *music{nullptr};
+    MIX_Track *musicTrack{nullptr};
+    MIX_Audio *music{nullptr};
     SDL_FRect messageDest{};
     // RmlUi
     Rml::ElementDocument *doc{nullptr};

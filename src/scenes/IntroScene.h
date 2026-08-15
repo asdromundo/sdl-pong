@@ -5,9 +5,10 @@
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
-class IntroScene : public core::scene::Scene {
+class IntroScene : public core::scene::Scene
+{
 public:
-    explicit IntroScene(AppContext* context);
+    explicit IntroScene(AppContext *context);
     ~IntroScene() override;
 
     // Lifecycle
@@ -23,13 +24,14 @@ public:
     void Render() override;
 
 private:
-    SDL_Texture* messageTex{nullptr};
-    SDL_Texture* imageTex{nullptr};
-    Mix_Music* music{nullptr};
+    SDL_Texture *messageTex{nullptr};
+    SDL_Texture *imageTex{nullptr};
+    MIX_Track *musicTrack{nullptr};
+    MIX_Audio *music{nullptr};
     SDL_FRect messageDest{};
 
-    bool LoadImageTexture(const std::string& path);
-    bool LoadMusic(const std::string& path);
+    bool LoadImageTexture(const std::string &path);
+    bool LoadMusic(const std::string &path);
 };
 
 #endif // SCENES_INTRO_SCENE_H

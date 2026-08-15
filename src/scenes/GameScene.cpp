@@ -17,10 +17,17 @@ GameScene::~GameScene()
 
 bool GameScene::Init()
 {
+    MIX_Mixer *globalMixer = app->mixer;
     // Load sounds and resources
-    wallBounceSound = Mix_LoadWAV("resources/sounds/ping.wav");
-    paddleBounceSound = Mix_LoadWAV("resources/sounds/pong.wav");
-    scoreSound = Mix_LoadWAV("resources/sounds/score.wav");
+    wallBounceSound = MIX_LoadAudio(globalMixer, "resources/sounds/ping.wav", false);
+    paddleBounceSound = MIX_LoadAudio(globalMixer, "resources/sounds/pong.wav", false);
+    scoreSound = MIX_LoadAudio(globalMixer, "resources/sounds/score.wav", false);
+    wallBounceTrack = MIX_CreateTrack(app->mixer);
+    paddleBounceTrack = MIX_CreateTrack(app->mixer);
+    scoreTrack = MIX_CreateTrack(app->mixer);
+    MIX_SetTrackAudio(wallBounceTrack, wallBounceSound);
+    MIX_SetTrackAudio(paddleBounceTrack, paddleBounceSound);
+    MIX_SetTrackAudio(scoreTrack, scoreSound);
 
     ball.sprite = LoadImageTexture("resources/ball.png");
     paddleSprite = LoadImageTexture("resources/paddle.png");
@@ -32,17 +39,17 @@ void GameScene::CleanUp()
 {
     if (wallBounceSound)
     {
-        Mix_FreeChunk(wallBounceSound);
+        MIX_DestroyAudio(wallBounceSound);
         wallBounceSound = nullptr;
     }
     if (paddleBounceSound)
     {
-        Mix_FreeChunk(paddleBounceSound);
+        MIX_DestroyAudio(paddleBounceSound);
         paddleBounceSound = nullptr;
     }
     if (scoreSound)
     {
-        Mix_FreeChunk(scoreSound);
+        MIX_DestroyAudio(scoreSound);
         scoreSound = nullptr;
     }
     if (ball.sprite)
@@ -67,7 +74,7 @@ void GameScene::onSecondCounterTimer()
 
 /// This keeps track of the time
 /// This static calls the other one
-static Uint32 onSecondCounterTimerCallback(void *userdata, SDL_TimerID timerID, Uint32 interval)
+static Uint32 onSecondCounterTimerCallback(void *userdata, SDL_TimerID, Uint32 interval)
 {
     GameScene *instance = static_cast<GameScene *>(userdata);
     instance->onSecondCounterTimer();
@@ -259,11 +266,6 @@ void GameScene::Render()
     SDL_RenderPresent(app->renderer);
 }
 
-bool GameScene::LoadSound(const std::string &path)
-{
-    return true;
-}
-
 void GameScene::ResetBall()
 {
     ball.speed.value = initialSpeed;
@@ -297,7 +299,7 @@ void GameScene::CheckCollisions()
         Paddle paddle = paddles[playerIndex];
         if (SDL_HasRectIntersectionFloat(&ball.rec, &paddles[playerIndex].rec))
         {
-            Mix_PlayChannel(-1, paddleBounceSound, 0);
+            MIX_PlayTrack(paddleBounceTrack, 0);
             // Change bounce depending on impact zone
             const float paddleCenterY = paddle.rec.y + paddle.rec.h / 2;
             float offset = (ball.rec.y - paddleCenterY) / (paddle.rec.h / 2); // Range: -1 to 1
@@ -343,8 +345,7 @@ void GameScene::CheckCollisions()
         if (gameMode == game::mode::SOLO)
         {
             ball.velocity.x *= -1;
-            Mix_PlayChannel(-1, wallBounceSound, 0);
-            // wallSound
+            MIX_PlayTrack(wallBounceTrack, 0);
         }
         else
         {
@@ -373,7 +374,7 @@ void GameScene::CheckCollisions()
         // wallSound
         ball.velocity.y *= -1;
         ball.speed.value += ball.radius.value / 5;
-        Mix_PlayChannel(-1, wallBounceSound, 0);
+        MIX_PlayTrack(wallBounceTrack, 0);
     }
     // var out_bounds_y : bool = Ball.position.y + radius >= viewport_bounds.y or Ball.position.y + radius <= radius
     // if(out_bounds_y):
@@ -489,7 +490,7 @@ void GameScene::UpdateScore(int scorerIndex)
     if (scorerIndex >= 0)
     {
         scores[scorerIndex]++;
-        Mix_PlayChannel(-1, scoreSound, 0);
+        MIX_PlayTrack(scoreTrack, 0);
         UpdateScoreDisplay();
         CheckGameOver();
     }

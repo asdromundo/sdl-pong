@@ -21,6 +21,8 @@ bool IntroScene::Init()
         return false;
     }
 
+    musicTrack = MIX_CreateTrack(app->mixer);
+
     bool ok =
         LoadImageTexture((basePath / "gs_tiger.svg").string()) &&
         LoadMusic((basePath / "the_entertainer.ogg").string());
@@ -36,7 +38,8 @@ void IntroScene::OnEnter()
 {
     if (music)
     {
-        Mix_PlayMusic(music, 0);
+        MIX_SetTrackAudio(musicTrack, music);
+        MIX_PlayTrack(musicTrack, -1);
     }
     else
     {
@@ -46,7 +49,7 @@ void IntroScene::OnEnter()
 
 void IntroScene::OnExit()
 {
-    Mix_HaltMusic();
+    MIX_StopTrack(musicTrack, 10);
 }
 
 void IntroScene::CleanUp()
@@ -63,17 +66,17 @@ void IntroScene::CleanUp()
     }
     if (music)
     {
-        Mix_FreeMusic(music);
+        MIX_DestroyAudio(music);
         music = nullptr;
     }
 }
 
-SDL_AppResult IntroScene::HandleEvent(SDL_Event *event)
+SDL_AppResult IntroScene::HandleEvent(SDL_Event *)
 {
     return SDL_APP_CONTINUE;
 }
 
-void IntroScene::Update(float deltaTime)
+void IntroScene::Update(float)
 {
     // Add animation or logic if needed
 }
@@ -120,12 +123,11 @@ bool IntroScene::LoadImageTexture(const std::string &path)
 
 bool IntroScene::LoadMusic(const std::string &path)
 {
-    music = Mix_LoadMUS(path.c_str());
+    music = MIX_LoadAudio(app->mixer, path.c_str(), false);
     if (!music)
     {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load music: %s", SDL_GetError());
         return false;
     }
-    // Mix_PlayMusic(music, 0);
     return true;
 }

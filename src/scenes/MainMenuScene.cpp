@@ -19,13 +19,15 @@ public:
         if (event.GetType() == "focus")
         {
             // Reproduce el sonido al enfocar un botón
-            Mix_PlayChannel(-1, owner->moveSound, 0);
+            MIX_SetTrackAudio(owner->track1, owner->moveSound);
+            MIX_PlayTrack(owner->track1, 0);
             return;
         }
 
         if (event.GetType() == "click")
         {
-            Mix_PlayChannel(-1, owner->enterSound, 0);
+            MIX_SetTrackAudio(owner->track1, owner->enterSound);
+            MIX_PlayTrack(owner->track1, 0);
             if (id == "solo")
             {
                 game::menu::EmitStartGameEvent(game::mode::SOLO);
@@ -67,8 +69,12 @@ bool MainMenuScene::Init()
 
     bool ok =
         LoadImageTexture((basePath / "resources/pong_logo.png").string());
-    moveSound = Mix_LoadWAV("resources/sounds/ping.wav");
-    enterSound = Mix_LoadWAV("resources/sounds/pong.wav");
+
+    track1 = MIX_CreateTrack(app->mixer);
+    track2 = MIX_CreateTrack(app->mixer);
+    musicTrack = MIX_CreateTrack(app->mixer);
+    moveSound = MIX_LoadAudio(app->mixer, "resources/sounds/ping.wav", false);
+    enterSound = MIX_LoadAudio(app->mixer, "resources/sounds/pong.wav", false);
 
     // LoadMusic((basePath / "resources/sounds/the_entertainer.ogg").string());
 
@@ -88,7 +94,8 @@ void MainMenuScene::OnEnter()
 {
     if (music)
     {
-        Mix_PlayMusic(music, 0);
+        MIX_SetTrackAudio(musicTrack, music);
+        MIX_PlayTrack(musicTrack, -1);
     }
 
     doc = app->context->LoadDocument("resources/ui/main_menu_screen.rml");
@@ -129,7 +136,8 @@ void MainMenuScene::OnEnter()
 
 void MainMenuScene::OnExit()
 {
-    Mix_HaltMusic();
+    MIX_StopTrack(musicTrack, 10);
+
     if (doc)
     {
         doc->Close();
@@ -150,17 +158,17 @@ void MainMenuScene::CleanUp()
     }
     if (music)
     {
-        Mix_FreeMusic(music);
+        MIX_DestroyAudio(music);
         music = nullptr;
     }
     if (moveSound)
     {
-        Mix_FreeChunk(moveSound);
+        MIX_DestroyAudio(moveSound);
         moveSound = nullptr;
     }
     if (enterSound)
     {
-        Mix_FreeChunk(enterSound);
+        MIX_DestroyAudio(enterSound);
         enterSound = nullptr;
     }
 }
@@ -191,7 +199,7 @@ SDL_AppResult MainMenuScene::HandleEvent(SDL_Event *event)
     return SDL_APP_CONTINUE;
 }
 
-void MainMenuScene::Update(float deltaTime)
+void MainMenuScene::Update(float)
 {
     // Add animation or logic if needed
 }
@@ -276,12 +284,11 @@ bool MainMenuScene::LoadImageTexture(const std::string &path)
 
 bool MainMenuScene::LoadMusic(const std::string &path)
 {
-    music = Mix_LoadMUS(path.c_str());
+    music = MIX_LoadAudio(app->mixer, path.c_str(), false);
     if (!music)
     {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load music: %s", SDL_GetError());
         return false;
     }
-    // Mix_PlayMusic(music, 0);
     return true;
 }

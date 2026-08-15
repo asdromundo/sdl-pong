@@ -31,19 +31,19 @@ void SplashScene::Ready()
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Splash scene ready.");
 }
 
-static Uint32 SceneFinishedTimerCallback(void *userdata, SDL_TimerID timerID, Uint32 interval)
+static Uint32 SceneFinishedTimerCallback(void *, SDL_TimerID, Uint32)
 {
     // Return whether the signal was emited or not
     core::scene::events::EmitSceneFinishedEvent();
     return 0;
 }
 
-void SplashScene::RenderLogo(SDL_Renderer *renderer)
+void SplashScene::RenderLogo()
 {
     // Clean background color
     SDL_SetRenderDrawColor(app->renderer, 36, 18, 36, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(app->renderer);
-    
+
     int targetWidth, targetHeight;
     SDL_GetCurrentRenderOutputSize(app->renderer, &targetWidth, &targetHeight);
 
@@ -62,7 +62,7 @@ void SplashScene::OnEnter()
 { // Solo renderizamos la textura si está cargada
     if (logoTexture)
     {
-        RenderLogo(app->renderer);
+        RenderLogo();
     }
 }
 
@@ -72,14 +72,14 @@ SDL_AppResult SplashScene::HandleEvent(SDL_Event *event)
     {
         if (event->type == SDL_EVENT_WINDOW_RESIZED)
         {
-            RenderLogo(app->renderer);
+            RenderLogo();
             return SDL_APP_CONTINUE;
         }
     }
     return SDL_APP_CONTINUE;
 }
 
-void SplashScene::Update(float deltatime)
+void SplashScene::Update(float)
 {
 }
 

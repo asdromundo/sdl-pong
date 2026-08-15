@@ -9,7 +9,6 @@
 #include "game/Components.h"
 #include <RmlUi/Core/ElementDocument.h>
 
-
 class GameScene : public core::scene::Scene
 {
 public:
@@ -47,39 +46,43 @@ private:
     float timeAfterGameEnded{-1.0f};
 
     // RmlUi
-    Rml::ElementDocument* doc{nullptr};
+    Rml::ElementDocument *doc{nullptr};
 
     // Components
-    struct Ball {
+    struct Ball
+    {
         Radius radius;
         Velocity velocity;
         Speed speed;
-        SDL_Texture* sprite{nullptr};
+        SDL_Texture *sprite{nullptr};
         SDL_FRect rec;
     } ball;
 
-    struct Paddle {
+    struct Paddle
+    {
         SDL_FRect rec;
         Speed speed;
         int direction{}; // 0, 1 or -1
     };
-    
-    SDL_Texture* paddleSprite{nullptr};
-    Paddle paddles[2]; // Paddles for players
+
+    SDL_Texture *paddleSprite{nullptr};
+    Paddle paddles[2];          // Paddles for players
     Size2D lastKnownRenderSize; // To compare on resize
 
     // SDL resources
     SDL_Texture *scoreTexture{nullptr};
-    Mix_Chunk *wallBounceSound{nullptr};
-    Mix_Chunk *paddleBounceSound{nullptr};
-    Mix_Chunk *scoreSound{nullptr};
+    MIX_Audio *wallBounceSound{nullptr};
+    MIX_Audio *paddleBounceSound{nullptr};
+    MIX_Audio *scoreSound{nullptr};
+    MIX_Track *wallBounceTrack{nullptr};
+    MIX_Track *paddleBounceTrack{nullptr};
+    MIX_Track *scoreTrack{nullptr};
 
     // Helper functions
     void ResetBall();
     void UpdatePaddleMovement(int paddleIndex, int direction, float deltaTime);
     void CheckCollisions();
-    bool LoadSound(const std::string &path);
-    SDL_Texture* LoadImageTexture(const std::string &path);
+    SDL_Texture *LoadImageTexture(const std::string &path);
     void adjustToScreen();
     void UpdateScore(int scorerIndex);
     void UpdateScoreDisplay();

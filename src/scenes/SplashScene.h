@@ -5,10 +5,10 @@
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
-
-class SplashScene : public core::scene::Scene {
+class SplashScene : public core::scene::Scene
+{
 public:
-    explicit SplashScene(AppContext* context);
+    explicit SplashScene(AppContext *context);
     ~SplashScene() override;
 
     // Lifecycle
@@ -24,10 +24,10 @@ public:
     void Render() override;
 
 private:
-    SDL_Texture* logoTexture{nullptr};
+    SDL_Texture *logoTexture{nullptr};
 
-    bool LoadImageTexture(const std::string& path);
-    void RenderLogo(SDL_Renderer *renderer);
+    bool LoadImageTexture(const std::string &path);
+    void RenderLogo();
 };
 
 #endif // SCENES_SPLASH_SCENE_H

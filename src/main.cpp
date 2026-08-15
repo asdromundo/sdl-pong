@@ -34,19 +34,13 @@ SDL_AppResult SDL_Fail()
     return SDL_APP_FAILURE;
 }
 
-SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
+SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
 {
     // init the library, here we make a window so we only need the Video capabilities.
     if (not SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         return SDL_Fail();
     }
-
-    // init TTF
-    // if (not TTF_Init())
-    // {
-    //     return SDL_Fail();
-    // }
 
     // create a window
 
@@ -68,7 +62,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         SDL_Log("Failed to load icon: %s", SDL_GetError());
     }
 
-    // SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
     // create a renderer
     SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
     if (not renderer)
@@ -78,11 +72,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     // init SDL Mixer
     auto audioDevice = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
-    if (not audioDevice)
+    if (not audioDevice or not MIX_Init())
     {
         return SDL_Fail();
     }
-    if (not Mix_OpenAudio(audioDevice, NULL))
+    MIX_Mixer *mixer = MIX_CreateMixerDevice(audioDevice, NULL);
+    if (not mixer)
     {
         return SDL_Fail();
     }
@@ -106,6 +101,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         .window = window,
         .renderer = renderer,
         .audioDevice = audioDevice,
+        .mixer = mixer,
     };
 
     SDL_SetRenderVSync(renderer, -1); // enable vysnc
@@ -210,11 +206,11 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     {
         const SDL_Keycode keycode = event->key.key;
 
-        // Convierte la tecla SDL a RmlUi
+        // SDL key to RmlUi
         Rml::Input::KeyIdentifier rml_key = RmlSDL::ConvertKey(keycode);
         app->context->ProcessKeyDown(rml_key, 0);
 
-        // Simula un Enter si hace falta para que dispare eventos "click"
+        // If needed simulate Enter
         if (keycode == SDLK_RETURN || keycode == SDLK_KP_ENTER)
         {
             app->context->ProcessTextInput("\n");
@@ -261,7 +257,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     return app->app_quit;
 }
 
-void SDL_AppQuit(void *appstate, SDL_AppResult result)
+void SDL_AppQuit(void *appstate, SDL_AppResult)
 {
     auto *app = (AppContext *)appstate;
     if (app)
@@ -269,8 +265,8 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result)
         SDL_DestroyRenderer(app->renderer);
         SDL_DestroyWindow(app->window);
 
-        Mix_FadeOutMusic(1000); // prevent the music from abruptly ending.
-        Mix_CloseAudio();
+        MIX_StopAllTracks(app->mixer, 1000); // prevent the music from abruptly ending.
+        MIX_DestroyMixer(app->mixer);
         SDL_CloseAudioDevice(app->audioDevice);
         SDL_Log("Closing app");
         Rml::Shutdown();
@@ -279,8 +275,7 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result)
 
         delete app;
     }
-    // TTF_Quit();
-    Mix_Quit();
+    MIX_Quit();
     SDL_Log("Application quit successfully!\n");
     SDL_Quit();
 }

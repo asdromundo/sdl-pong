@@ -5,14 +5,16 @@
 #include "rmlui/RmlUi_Platform_SDL.h"
 #include "rmlui/RmlUi_Renderer_SDL.h"
 
-struct AppContext {
-    SDL_Window* window{nullptr};
-    SDL_Renderer* renderer{nullptr};
+struct AppContext
+{
+    SDL_Window *window{nullptr};
+    SDL_Renderer *renderer{nullptr};
     SDL_AudioDeviceID audioDevice{};
+    MIX_Mixer *mixer{nullptr};
     SDL_AppResult app_quit{SDL_APP_CONTINUE};
-    RenderInterface_SDL* render_interface{nullptr};
-    SystemInterface_SDL* system_interface{nullptr};
-    Rml::Context *context;
+    RenderInterface_SDL *render_interface{nullptr};
+    SystemInterface_SDL *system_interface{nullptr};
+    Rml::Context *context{nullptr};
     // Otros recursos globales que desees...
 };
 
