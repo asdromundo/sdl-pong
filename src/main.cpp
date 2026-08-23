@@ -6,7 +6,6 @@
 #include <SDL3_image/SDL_image.h>
 
 #include "scenes/ScreenManager.h"
-#include "core/utils/FileSystem.h"
 
 // RmlUi
 #include <RmlUi/Core/Context.h>
@@ -38,13 +37,15 @@ SDL_AppResult SDL_Fail()
 SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
 {
     SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "composition");
+    SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+    // Submit click events when focusing the window.
+    SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     if (not SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         return SDL_Fail();
     }
 
-    // utility for asset reading
-    FileSystem::Init();
     // create a window
 
     SDL_Window *window = SDL_CreateWindow("Pong", windowStartWidth, windowStartHeight, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
@@ -53,7 +54,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
         return SDL_Fail();
     }
 
-    SDL_Surface *icon = IMG_Load("assets/pong_logo.png"_asset.c_str());
+    SDL_Surface *icon = IMG_Load("assets/pong_logo.png");
     if (icon)
     {
         SDL_SetWindowIcon(window, icon);
@@ -111,9 +112,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
     SDL_Log("Application started successfully!");
 
     // RmlUi
-    // Submit click events when focusing the window.
-    SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+
     // Instantiate the interfaces to RmlUi.
     auto app = (AppContext *)*appstate;
     app->render_interface = new RenderInterface_SDL(renderer);
@@ -134,7 +133,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
     Rml::Initialise();
 
     display_scale = SDL_GetWindowDisplayScale(window);
-    const Rml::Vector2i dim = Rml::Vector2i(windowStartWidth * display_scale, windowStartHeight * display_scale);
+    int bbwidth, bbheight;
+    SDL_GetWindowSizeInPixels(window, &bbwidth, &bbheight);
+    const Rml::Vector2i dim = Rml::Vector2i(bbwidth, bbheight);
     Rml::Context *context = Rml::CreateContext("main", dim, app->render_interface);
     if (!context)
     {
@@ -256,6 +257,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         default:
             break;
         }
+        break;
     }
     default:
         break;
@@ -291,16 +293,19 @@ void SDL_AppQuit(void *appstate, SDL_AppResult)
     auto *app = (AppContext *)appstate;
     if (app)
     {
-        SDL_DestroyRenderer(app->renderer);
-        SDL_DestroyWindow(app->window);
-
         MIX_StopAllTracks(app->mixer, 1000); // prevent the music from abruptly ending.
         MIX_DestroyMixer(app->mixer);
         SDL_CloseAudioDevice(app->audioDevice);
-        SDL_Log("Closing app");
         Rml::Shutdown();
+
+        SDL_Log("Closing app");
+
         delete app->render_interface;
         delete app->system_interface;
+        delete app->file_interface;
+
+        SDL_DestroyRenderer(app->renderer);
+        SDL_DestroyWindow(app->window);
 
         delete app;
     }

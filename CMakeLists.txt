@@ -5,7 +5,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
 
-project(disease_propagation)
+project(pong)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "" FORCE)
@@ -48,10 +48,7 @@ set(SOURCES
     src/core/scene/StateMachine.h
 
     src/core/utils/image/Texture.cpp
-    src/core/utils/image/Texture.h
-    src/core/utils/FileSystem.cpp
-    src/core/utils/FileSystem.h
-    
+    src/core/utils/image/Texture.h    
 
     src/game/Components.h
     src/game/Mode.h
@@ -248,8 +245,8 @@ set_target_properties(${EXECUTABLE_NAME} PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist.in"
     XCODE_GENERATE_SCHEME TRUE
-    XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.asdrome.disease_propagation"
-    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.asdrome.disease_propagation"
+    XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.asdrome.pong"
+    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.asdrome.pong"
     RESOURCE "${RESOURCE_FILES}"
     BUILD_WITH_INSTALL_RPATH TRUE
     INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib"

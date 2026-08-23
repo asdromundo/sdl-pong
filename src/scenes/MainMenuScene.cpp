@@ -1,12 +1,10 @@
 #include <SDL3_image/SDL_image.h>
 #include <RmlUi/Core/Context.h>
 #include <RmlUi/Core/ElementDocument.h>
-#include <filesystem>
 #include <cmath>
 
 #include "MainMenuScene.h"
 #include "core/scene/Events.h"
-#include "core/utils/FileSystem.h"
 
 class RmlUiEventListener : public Rml::EventListener
 {

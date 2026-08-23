@@ -6,7 +6,6 @@
 #include "SplashScene.h"
 #include "core/scene/Events.h"
 #include "core/utils/image/Texture.h"
-#include "core/utils/FileSystem.h"
 
 SplashScene::SplashScene(AppContext *context)
     : Scene("Splash", context) {}
@@ -18,7 +17,7 @@ SplashScene::~SplashScene()
 
 bool SplashScene::Init()
 {
-    return LoadImageTexture("assets/logo.svg"_asset.c_str());
+    return LoadImageTexture("assets/logo.svg");
 }
 
 void SplashScene::Ready()
