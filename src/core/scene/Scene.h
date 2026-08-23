@@ -47,14 +47,14 @@ namespace core
             // Scene lifecycle methods
 
             /**
-             * @brief Initialize persistent or context-independent resources.
+             * @brief Initialize persistent or context-independent assets.
              * @return true if initialization succeeded; false otherwise.
              */
             virtual bool Init() = 0;
 
             /**
              * @brief Called when the scene is fully initialized.
-             * Ideal for logic that depends on all resources being ready.
+             * Ideal for logic that depends on all assets being ready.
              */
             virtual void Ready() = 0;
 
@@ -66,12 +66,12 @@ namespace core
 
             /**
              * @brief Called before the scene is deactivated (exited).
-             * Ideal for saving state or releasing temporary resources.
+             * Ideal for saving state or releasing temporary assets.
              */
             virtual void OnExit() = 0;
 
             /**
-             * @brief Releases all final resources when the scene is no longer needed.
+             * @brief Releases all final assets when the scene is no longer needed.
              */
             virtual void CleanUp() = 0;
 

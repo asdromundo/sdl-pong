@@ -69,7 +69,7 @@ private:
     Paddle paddles[2];          // Paddles for players
     Size2D lastKnownRenderSize; // To compare on resize
 
-    // SDL resources
+    // SDL assets
     SDL_Texture *scoreTexture{nullptr};
     MIX_Audio *wallBounceSound{nullptr};
     MIX_Audio *paddleBounceSound{nullptr};

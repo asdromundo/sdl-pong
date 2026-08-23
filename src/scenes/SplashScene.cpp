@@ -6,6 +6,7 @@
 #include "SplashScene.h"
 #include "core/scene/Events.h"
 #include "core/utils/image/Texture.h"
+#include "core/utils/FileSystem.h"
 
 SplashScene::SplashScene(AppContext *context)
     : Scene("Splash", context) {}
@@ -17,13 +18,7 @@ SplashScene::~SplashScene()
 
 bool SplashScene::Init()
 {
-    std::filesystem::path basePath = SDL_GetBasePath();
-    if (basePath.empty())
-    {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get base path: %s", SDL_GetError());
-        return false;
-    }
-    return LoadImageTexture((basePath / "resources/logo.svg").string());
+    return LoadImageTexture("assets/logo.svg"_asset.c_str());
 }
 
 void SplashScene::Ready()

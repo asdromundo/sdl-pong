@@ -1,5 +1,5 @@
-# // TODO: Remove non open source resources
-src/resources
+# // TODO: Remove non open source assets
+src/assets
 
 # VS Code
 .vscode

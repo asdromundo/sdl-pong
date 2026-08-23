@@ -1,0 +1,41 @@
+<rml>
+    <head>
+        <title>Main Menu</title>
+        <style>
+            body {
+                font-family: "Press Start 2P";
+                font-size: 20px;
+                color: white;
+                text-align: center;
+                padding-top: 50px;
+            }
+            h1 {
+                font-size: 40px;
+                margin-bottom: 40px;
+            }
+            button {
+                display: block;
+                width: 300px;
+                margin: 20px auto;
+                padding: 20px;
+                background-color: #333;
+                border-width: 2px;
+                border-color: #555;
+                color: white;
+            }
+            button:hover {
+                background-color: #555;
+                border-color: #777;
+            }
+            button:active {
+                background-color: #777;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>PONG</h1>
+        <button id="solo">Solo</button>
+        <button id="single">Single Player</button>
+        <button id="two">Two Players</button>
+    </body>
+</rml>

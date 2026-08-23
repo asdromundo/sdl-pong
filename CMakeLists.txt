@@ -1,11 +1,15 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.22)
 
 # Configuración general
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
 
-project(pong)
+project(disease_propagation)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "" FORCE)
+endif()
 
 if ((APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin") OR EMSCRIPTEN)
     set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
@@ -45,6 +49,9 @@ set(SOURCES
 
     src/core/utils/image/Texture.cpp
     src/core/utils/image/Texture.h
+    src/core/utils/FileSystem.cpp
+    src/core/utils/FileSystem.h
+    
 
     src/game/Components.h
     src/game/Mode.h
@@ -53,6 +60,8 @@ set(SOURCES
     src/rmlui/RmlUi_Platform_SDL.h
     src/rmlui/RmlUi_Renderer_SDL.cpp
     src/rmlui/RmlUi_Renderer_SDL.h
+    src/rmlui/RmlUi_FileInterface_SDL.cpp
+    src/rmlui/RmlUi_FileInterface_SDL.h
 
     src/scenes/GameScene.cpp
     src/scenes/GameScene.h
@@ -67,12 +76,11 @@ set(SOURCES
 
 # Si estamos en Windows, incluir el archivo de recursos del ícono
 if(WIN32)
-    set(ICON_RESOURCE src/resources.rc)
+    set(ICON_RESOURCE src/assets.rc)
     target_sources(${EXECUTABLE_NAME} PRIVATE ${ICON_RESOURCE})
 endif()
 
 target_sources(${EXECUTABLE_NAME} PRIVATE ${SOURCES})
-
 
 # *** Incluir directorios ***
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
@@ -86,12 +94,24 @@ endif()
 
 # Requerimientos del estándar de C++
 target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_23)
+set_target_properties(${EXECUTABLE_NAME} PROPERTIES CXX_EXTENSIONS OFF)
 
 # Opciones de compilación
 if(MSVC)
     target_compile_options(${EXECUTABLE_NAME} PRIVATE /W4)
 else()
     target_compile_options(${EXECUTABLE_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Verificacion de memoria
+if (LINUX)
+    target_compile_options(${EXECUTABLE_NAME} PRIVATE 
+    $<$<CONFIG:Debug>:-fsanitize=address -g -fno-omit-frame-pointer>
+    )
+
+    target_link_options(${EXECUTABLE_NAME} PRIVATE 
+    $<$<CONFIG:Debug>:-fsanitize=address>
+    )
 endif()
 
 if(EMSCRIPTEN)
@@ -102,63 +122,80 @@ endif()
 include(FetchContent)
 
 set(SDL_X11 OFF CACHE INTERNAL "")
-# SDL3
-find_package(SDL3 3.4.4 QUIET)
-if(NOT SDL3_FOUND)
-    message(STATUS "SDL3 no encontrado, descargando...")
-    FetchContent_Declare(SDL3
-        GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-        GIT_TAG release-3.4.4
-        GIT_SHALLOW ON
-    )
-    FetchContent_MakeAvailable(SDL3)
-endif()
+
+# Helper para evitar repetir el patrón find_package + FetchContent
+function(fetch_or_find name version repo tag)
+    find_package(${name} ${version} QUIET)
+    if(NOT ${name}_FOUND)
+        message(STATUS "${name} no encontrado, descargando (tag: ${tag})...")
+        FetchContent_Declare(${name}
+            GIT_REPOSITORY ${repo}
+            GIT_TAG ${tag}
+            GIT_SHALLOW ON
+        )
+        FetchContent_MakeAvailable(${name})
+    endif()
+endfunction()
+
+# SDL3 -> apuntando a la rama "main" en vez de un release fijo
+fetch_or_find(SDL3 3.4.14 https://github.com/libsdl-org/SDL.git main)
 
 # SDL_mixer
-find_package(SDL3_mixer 3.2.0 QUIET)
-if(NOT SDL3_mixer_FOUND)
-    message(STATUS "SDL3_mixer no encontrado, descargando...")
-    set(SDLMIXER_MIDI_NATIVE OFF)
-    set(SDLMIXER_GME OFF)
-    set(SDLMIXER_WAVPACK OFF)
-    set(SDLMIXER_MOD OFF)
-    set(SDLMIXER_OPUS OFF)
-    set(SDLMIXER_VENDORED ON)
-    FetchContent_Declare(SDL3_mixer
-        GIT_REPOSITORY https://github.com/libsdl-org/SDL_mixer.git
-        GIT_TAG release-3.2.0
-        GIT_SHALLOW ON
-    )
-    FetchContent_MakeAvailable(SDL3_mixer)
-endif()
+set(SDLMIXER_MIDI_NATIVE OFF)
+set(SDLMIXER_GME OFF)
+set(SDLMIXER_WAVPACK OFF)
+set(SDLMIXER_MOD OFF)
+set(SDLMIXER_OPUS OFF)
+set(SDLMIXER_FLAC OFF)
+set(SDLMIXER_VENDORED ON)
+fetch_or_find(SDL3_mixer 3.2.4 https://github.com/libsdl-org/SDL_mixer.git release-3.2.0)
 
 # SDL_image
-find_package(SDL3_image 3.4.2 QUIET)
-if(NOT SDL3_image_FOUND)
-    message(STATUS "SDL3_image no encontrado, descargando...")
-    FetchContent_Declare(SDL3_image
-        GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-        GIT_TAG release-3.4.2
-        GIT_SHALLOW ON
-    )
-    FetchContent_MakeAvailable(SDL3_image)
-endif()
+set(SDLIMAGE_AVIF OFF)
+set(SDLIMAGE_VENDORED ON)
+fetch_or_find(SDL3_image 3.4.4 https://github.com/libsdl-org/SDL_image.git release-3.4.4)
 
-# RmlUi
-find_package(RmlUi 6.2 QUIET)
-if(NOT RmlUi_FOUND)
-    message(STATUS "RmlUi no encontrado, descargando...")
-    FetchContent_Declare(RmlUi
-        GIT_REPOSITORY https://github.com/mikke89/RmlUi.git
-        GIT_TAG 6.2
+# --- Solución para FreeType en Android ---
+if(ANDROID)
+    message(STATUS "Android detectado: Descargando FreeType desde código fuente...")
+
+    # Desactivamos dependencias extra de FreeType para que compile directo y sin errores
+    set(FT_DISABLE_ZLIB ON CACHE BOOL "Disable Zlib" FORCE)
+    set(FT_DISABLE_BZIP2 ON CACHE BOOL "Disable BZip2" FORCE)
+    set(FT_DISABLE_PNG ON CACHE BOOL "Disable PNG" FORCE)
+    set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "Disable HarfBuzz" FORCE)
+    set(FT_DISABLE_BROTLI ON CACHE BOOL "Disable Brotli" FORCE)
+
+    FetchContent_Declare(freetype
+        GIT_REPOSITORY https://github.com/freetype/freetype.git
+        GIT_TAG VER-2-13-2 # Versión estable
         GIT_SHALLOW ON
     )
-    FetchContent_MakeAvailable(RmlUi)
+    FetchContent_MakeAvailable(freetype)
+
+    # RmlUi buscará el target 'Freetype::Freetype'. Lo creamos como alias.
+    if(TARGET freetype AND NOT TARGET Freetype::Freetype)
+        add_library(Freetype::Freetype ALIAS freetype)
+    endif()
+
+    # Creamos un archivo falso FindFreetype.cmake temporal.
+    # Esto evita que RmlUi busque en el sistema host y aborte la configuración.
+    file(WRITE "${CMAKE_BINARY_DIR}/cmake_mocks/FindFreetype.cmake" "
+        set(FREETYPE_FOUND TRUE)
+        set(Freetype_FOUND TRUE)
+    ")
+    
+    # Le decimos a CMake que busque nuestros módulos falsos primero
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_BINARY_DIR}/cmake_mocks")
 endif()
+# ------------------------------------------
+
+# RmlUi (Ahora encontrará el FreeType que acabamos de compilar)
+fetch_or_find(RmlUi 6.2 https://github.com/mikke89/RmlUi.git 6.2)
 
 target_compile_definitions(${EXECUTABLE_NAME} PRIVATE RMLUI_SDL_VERSION_MAJOR=3)
 
-target_link_libraries(${EXECUTABLE_NAME} PUBLIC 
+target_link_libraries(${EXECUTABLE_NAME} PRIVATE
     SDL3_mixer::SDL3_mixer
     SDL3_image::SDL3_image
     SDL3::SDL3
@@ -171,21 +208,21 @@ if(APPLE AND NOT BUILD_SHARED_LIBS)
     find_library(CT_LIB CoreText REQUIRED)
     find_library(CG_LIB CoreGraphics REQUIRED)
     find_library(CF_LIB CoreFoundation REQUIRED)
-    target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${CF_LIB} ${CT_LIB} ${IO_LIB} ${CS_LIB} ${CG_LIB})
+    target_link_libraries(${EXECUTABLE_NAME} PRIVATE ${CF_LIB} ${CT_LIB} ${IO_LIB} ${CS_LIB} ${CG_LIB})
 endif()
 
 target_compile_definitions(${EXECUTABLE_NAME} PRIVATE SDL_MAIN_USE_CALLBACKS)
 
 # *** Gestión de custom commands para copiar assets ***
-set(ASSETS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/resources)                  # Carpeta original de los assets.
-set(ASSETS_OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resources)     # Carpeta destino en build.
+set(ASSETS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data/assets)              # Carpeta original de los assets.
+set(ASSETS_OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets)     # Carpeta destino en build.
 
 # Copiar automáticamente la carpeta de assets al directorio de build.
 if(EXISTS ${ASSETS_DIR})
     add_custom_command(
         TARGET ${EXECUTABLE_NAME}
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory 
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${ASSETS_DIR} ${ASSETS_OUTPUT_DIR}  # Copiar carpeta assets al output.
         COMMENT "Copying assets to build directory (${ASSETS_OUTPUT_DIR})."
     )
@@ -198,7 +235,7 @@ if (EMSCRIPTEN)
     file(GLOB ASSET_FILES RELATIVE "${ASSETS_DIR}" CONFIGURE_DEPENDS "${ASSETS_DIR}/*")
     foreach(ASSET_FILE IN LISTS ASSET_FILES)
         get_filename_component(FILENAME ${ASSET_FILE} NAME)
-        target_link_libraries(${EXECUTABLE_NAME} PRIVATE "--preload-file ${ASSETS_DIR}/${FILENAME}")
+        target_link_options(${EXECUTABLE_NAME} PRIVATE "--preload-file=${ASSETS_DIR}/${FILENAME}")
     endforeach()
 endif()
 
@@ -207,13 +244,15 @@ if(IOS)
     set(RESOURCE_FILES "src/iosLaunchScreen.storyboard;src/logo.png")
 endif()
 
-set_target_properties(${EXECUTABLE_NAME} PROPERTIES 
+set_target_properties(${EXECUTABLE_NAME} PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist.in"
     XCODE_GENERATE_SCHEME TRUE
-    XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.asdrome.pong"
-    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.asdrome.pong"
+    XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.asdrome.disease_propagation"
+    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.asdrome.disease_propagation"
     RESOURCE "${RESOURCE_FILES}"
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib"
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "${EXECUTABLE_NAME}")
@@ -224,10 +263,10 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
         RUNTIME DESTINATION ./install/bin COMPONENT Runtime
     )
     set(DEP_DIR "${CMAKE_BINARY_DIR}")
-    INSTALL(CODE 
+    INSTALL(CODE
         "include(BundleUtilities)
         fixup_bundle(\"$<TARGET_BUNDLE_DIR:${EXECUTABLE_NAME}>\" \"\" \"${DEP_DIR}\")
-        " 
+        "
     )
     set(CPACK_GENERATOR "DragNDrop")
     include(CPack)

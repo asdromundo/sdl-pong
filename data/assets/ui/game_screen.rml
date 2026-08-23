@@ -1,0 +1,41 @@
+<rml>
+    <head>
+        <title>Game</title>
+        <style>
+            body {
+                font-family: "Press Start 2P";
+                font-size: 30px;
+                color: white;
+                text-align: center;
+            }
+            #score_board {
+                display: block;
+                position: absolute;
+                top: 20px;
+                width: 100%;
+                text-align: center;
+            }
+            #p1_score, #p2_score {
+                display: inline-block;
+                width: 100px;
+            }
+            #winner {
+                display: none;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 50px;
+                background-color: #000000aa;
+                padding: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="score_board">
+            <span id="p1_score">0</span>
+            <span id="p2_score">0</span>
+        </div>
+        <div id="winner">WINNER!</div>
+    </body>
+</rml>

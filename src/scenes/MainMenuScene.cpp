@@ -6,6 +6,7 @@
 
 #include "MainMenuScene.h"
 #include "core/scene/Events.h"
+#include "core/utils/FileSystem.h"
 
 class RmlUiEventListener : public Rml::EventListener
 {
@@ -60,23 +61,16 @@ MainMenuScene::~MainMenuScene()
 
 bool MainMenuScene::Init()
 {
-    std::filesystem::path basePath = SDL_GetBasePath();
-    if (basePath.empty())
-    {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get base path: %s", SDL_GetError());
-        return false;
-    }
-
     bool ok =
-        LoadImageTexture((basePath / "resources/pong_logo.png").string());
+        LoadImageTexture("assets/pong_logo.png");
 
     track1 = MIX_CreateTrack(app->mixer);
     track2 = MIX_CreateTrack(app->mixer);
     musicTrack = MIX_CreateTrack(app->mixer);
-    moveSound = MIX_LoadAudio(app->mixer, "resources/sounds/ping.wav", false);
-    enterSound = MIX_LoadAudio(app->mixer, "resources/sounds/pong.wav", false);
+    moveSound = MIX_LoadAudio(app->mixer, "assets/sounds/ping.wav", false);
+    enterSound = MIX_LoadAudio(app->mixer, "assets/sounds/pong.wav", false);
 
-    // LoadMusic((basePath / "resources/sounds/the_entertainer.ogg").string());
+    // LoadMusic((basePath / "assets/sounds/the_entertainer.ogg").string());
 
     return ok;
 }
@@ -84,7 +78,7 @@ bool MainMenuScene::Init()
 void MainMenuScene::Ready()
 {
     // Fonts should be loaded before any documents are loaded.
-    if (Rml::LoadFontFace("resources/monogram.ttf"))
+    if (Rml::LoadFontFace("assets/monogram.ttf"))
     {
         SDL_LogDebug(SDL_LOG_PRIORITY_DEBUG, "Loaded font");
     }
@@ -98,7 +92,7 @@ void MainMenuScene::OnEnter()
         MIX_PlayTrack(musicTrack, -1);
     }
 
-    doc = app->context->LoadDocument("resources/ui/main_menu_screen.rml");
+    doc = app->context->LoadDocument("assets/ui/main_menu_screen.rml");
     if (!doc)
     {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't read RmlUi document");
@@ -210,10 +204,8 @@ void MainMenuScene::Render()
     SDL_RenderClear(app->renderer);
 
     int targetWidth, targetHeight;
-    if (imageTex)
-    {
-        SDL_GetCurrentRenderOutputSize(app->renderer, &targetWidth, &targetHeight);
-    }
+
+    SDL_GetCurrentRenderOutputSize(app->renderer, &targetWidth, &targetHeight);
 
     // Relación de aspecto de la imagen (8:3)
     const float aspectRatio = 8.0f / 3.0f;

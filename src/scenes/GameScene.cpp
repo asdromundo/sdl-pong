@@ -1,5 +1,6 @@
 #include "GameScene.h"
 #include "core/scene/Events.h"
+#include "core/utils/FileSystem.h"
 
 #include <SDL3_image/SDL_image.h>
 #include <RmlUi/Core/Context.h>
@@ -18,10 +19,10 @@ GameScene::~GameScene()
 bool GameScene::Init()
 {
     MIX_Mixer *globalMixer = app->mixer;
-    // Load sounds and resources
-    wallBounceSound = MIX_LoadAudio(globalMixer, "resources/sounds/ping.wav", false);
-    paddleBounceSound = MIX_LoadAudio(globalMixer, "resources/sounds/pong.wav", false);
-    scoreSound = MIX_LoadAudio(globalMixer, "resources/sounds/score.wav", false);
+    // Load sounds and assets
+    wallBounceSound = MIX_LoadAudio(globalMixer, "assets/sounds/ping.wav"_asset.c_str(), false);
+    paddleBounceSound = MIX_LoadAudio(globalMixer, "assets/sounds/pong.wav"_asset.c_str(), false);
+    scoreSound = MIX_LoadAudio(globalMixer, "assets/sounds/score.wav"_asset.c_str(), false);
     wallBounceTrack = MIX_CreateTrack(app->mixer);
     paddleBounceTrack = MIX_CreateTrack(app->mixer);
     scoreTrack = MIX_CreateTrack(app->mixer);
@@ -29,8 +30,8 @@ bool GameScene::Init()
     MIX_SetTrackAudio(paddleBounceTrack, paddleBounceSound);
     MIX_SetTrackAudio(scoreTrack, scoreSound);
 
-    ball.sprite = LoadImageTexture("resources/ball.png");
-    paddleSprite = LoadImageTexture("resources/paddle.png");
+    ball.sprite = LoadImageTexture("assets/ball.png");
+    paddleSprite = LoadImageTexture("assets/paddle.png");
 
     return wallBounceSound && paddleBounceSound && scoreSound && ball.sprite && paddleSprite;
 }
@@ -91,7 +92,7 @@ static Size2D GetCurrentRenderSize(const AppContext *app)
 void GameScene::Ready()
 {
     // Fonts should be loaded before any documents are loaded.
-    if (Rml::LoadFontFace("resources/monogram.ttf"))
+    if (Rml::LoadFontFace("assets/monogram.ttf"_asset.c_str()))
     {
         SDL_LogDebug(SDL_LOG_PRIORITY_DEBUG, "Loaded font");
     }
@@ -123,7 +124,7 @@ void GameScene::OnEnter()
         secondCounterTimer = SDL_AddTimer(1000, onSecondCounterTimerCallback, this);
     }
 
-    doc = app->context->LoadDocument("resources/ui/game_screen.rml");
+    doc = app->context->LoadDocument("assets/ui/game_screen.rml"_asset.c_str());
     if (!doc)
     {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't read RmlUi document");

@@ -10,7 +10,7 @@
 /// @param screenManager
 /// @param app
 /// @return
-bool InitScreenManager(core::scene::Manager *screenManager, AppContext *app)
+inline bool InitScreenManager(core::scene::Manager *screenManager, AppContext *app)
 {
     // Register ALL of the subscene events, even if they should not be called yet.
     core::scene::events::RegisterCommonSceneEvents();
@@ -32,7 +32,7 @@ bool InitScreenManager(core::scene::Manager *screenManager, AppContext *app)
     return true;
 };
 
-SDL_AppResult HandleScreenEvents(SDL_Event *event, core::scene::Manager *sceneManager, AppContext *app)
+inline SDL_AppResult HandleScreenEvents(SDL_Event *event, core::scene::Manager *sceneManager, AppContext *app)
 {
     if (event->type == core::scene::events::SCENE_FINISHED)
     {
@@ -57,8 +57,8 @@ SDL_AppResult HandleScreenEvents(SDL_Event *event, core::scene::Manager *sceneMa
         }
         else
         {
-            std::string err = std::format("Scene %s ended unexpectedly", sceneManager->GetCurrentSceneName());
-            SDL_LogError(SDL_LOG_CATEGORY_ERROR, err.c_str());
+            std::string err = "Scene " + sceneManager->GetCurrentSceneName() + " ended unexpectedly";
+            SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s", err.c_str());
             sceneManager->CleanUp();
             return SDL_APP_SUCCESS;
         }
