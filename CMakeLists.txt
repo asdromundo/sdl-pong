@@ -145,7 +145,7 @@ set(SDLMIXER_MOD OFF)
 set(SDLMIXER_OPUS OFF)
 set(SDLMIXER_FLAC OFF)
 set(SDLMIXER_VENDORED ON)
-fetch_or_find(SDL3_mixer 3.2.4 https://github.com/libsdl-org/SDL_mixer.git release-3.2.0)
+fetch_or_find(SDL3_mixer 3.2.4 https://github.com/libsdl-org/SDL_mixer.git release-3.2.4)
 
 # SDL_image
 set(SDLIMAGE_AVIF OFF)
