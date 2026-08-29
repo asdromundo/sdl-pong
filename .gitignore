@@ -51,6 +51,7 @@ src/assets
 build/
 Build/
 build-*/
+web_build/
 
 # CMake generated files
 CMakeFiles/

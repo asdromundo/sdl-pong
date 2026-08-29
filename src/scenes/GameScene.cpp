@@ -91,7 +91,7 @@ static Size2D GetCurrentRenderSize(const AppContext *app)
 void GameScene::Ready()
 {
     // Fonts should be loaded before any documents are loaded.
-    if (Rml::LoadFontFace("assets/monogram.ttf"))
+    if (Rml::LoadFontFace("assets/PixelOperator8.ttf"))
     {
         SDL_LogDebug(SDL_LOG_PRIORITY_DEBUG, "Loaded font");
     }

@@ -61,6 +61,7 @@ bool MainMenuScene::Init()
 {
     bool ok =
         LoadImageTexture("assets/pong_logo.png");
+    SDL_SetTextureScaleMode(imageTex, SDL_SCALEMODE_NEAREST);
 
     track1 = MIX_CreateTrack(app->mixer);
     track2 = MIX_CreateTrack(app->mixer);
@@ -68,15 +69,13 @@ bool MainMenuScene::Init()
     moveSound = MIX_LoadAudio(app->mixer, "assets/sounds/ping.wav", false);
     enterSound = MIX_LoadAudio(app->mixer, "assets/sounds/pong.wav", false);
 
-    // LoadMusic((basePath / "assets/sounds/the_entertainer.ogg").string());
-
     return ok;
 }
 
 void MainMenuScene::Ready()
 {
     // Fonts should be loaded before any documents are loaded.
-    if (Rml::LoadFontFace("assets/monogram.ttf"))
+    if (Rml::LoadFontFace("assets/PixelOperator8.ttf"))
     {
         SDL_LogDebug(SDL_LOG_PRIORITY_DEBUG, "Loaded font");
     }
@@ -121,9 +120,6 @@ void MainMenuScene::OnEnter()
             btn_two->AddEventListener("focus", listener);
         }
     }
-
-    // End scene after timer
-    // SDL_AddTimer(200, SceneStartGameCallback, nullptr);
 }
 
 void MainMenuScene::OnExit()
@@ -210,22 +206,12 @@ void MainMenuScene::Render()
 
     float drawWidth, drawHeight;
 
-    // Si la pantalla es más alta que ancha, limitamos el ancho a la mitad del total
-    if (targetHeight > targetWidth)
-    {
-        drawWidth = targetWidth * 0.5f;
-        drawHeight = drawWidth / aspectRatio;
-    }
-    else
-    {
-        // Si es más ancha que alta, limitamos el alto a la mitad del total
-        drawHeight = targetHeight * 0.45f;
-        drawWidth = drawHeight * aspectRatio;
-    }
+    drawWidth = targetWidth * 0.95f;
+    drawHeight = drawWidth / aspectRatio;
 
-    // Calcular coordenadas para centrar
-    float dstX = (targetWidth - drawWidth) / 2.0f;
-    float dstY = (targetHeight - drawHeight) * 0.125f;
+    // Centering the image
+    float dstX = (targetWidth - drawWidth) * 0.5f;
+    float dstY = (targetHeight - drawHeight) * 0.5f;
 
     SDL_FRect dstRect = {
         dstX,
@@ -241,9 +227,7 @@ void MainMenuScene::Render()
     if (app->context)
     {
         app->context->Update();
-        // app->render_interface->BeginFrame();
         app->context->Render();
-        // app->render_interface->EndFrame();
     }
 
     SDL_RenderPresent(app->renderer);

@@ -1,41 +1,36 @@
 <rml>
+
     <head>
         <title>Game</title>
         <style>
             body {
-                font-family: "Press Start 2P";
-                font-size: 30px;
-                color: white;
-                text-align: center;
+                width: 100%;
+                height: 100%;
+                font-family: "Pixel Operator 8";
+                color: #ffffff;
             }
-            #score_board {
-                display: block;
+
+            #score {
                 position: absolute;
-                top: 20px;
+                top: 2.5vh;
+                left: 0;
                 width: 100%;
                 text-align: center;
+                font-size: 3.2vh;
+                letter-spacing: 0.1em;
             }
-            #p1_score, #p2_score {
-                display: inline-block;
-                width: 100px;
-            }
-            #winner {
-                display: none;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                font-size: 50px;
-                background-color: #000000aa;
-                padding: 20px;
+
+            /* Keep the HUD legible and out of the way on tall/narrow viewports. */
+            @media (max-aspect-ratio: 3 / 4) {
+                #score {
+                    top: 1.5vh;
+                    font-size: 2.6vh;
+                }
             }
         </style>
     </head>
+
     <body>
-        <div id="score_board">
-            <span id="p1_score">0</span>
-            <span id="p2_score">0</span>
-        </div>
-        <div id="winner">WINNER!</div>
+        <div id="score">00 | 00</div>
     </body>
 </rml>

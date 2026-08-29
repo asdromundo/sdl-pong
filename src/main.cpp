@@ -65,8 +65,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
         SDL_Log("Failed to load icon: %s", SDL_GetError());
     }
 
-    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
-    // create a renderer
+       // create a renderer
     SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
     if (not renderer)
     {

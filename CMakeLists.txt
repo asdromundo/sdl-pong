@@ -1,9 +1,13 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22...4.2)
 
 # Configuración general
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
+
+if(CMAKE_TOOLCHAIN_FILE MATCHES "emscripten|Emscripten")
+    set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+endif()
 
 project(pong)
 
@@ -111,8 +115,17 @@ if (LINUX)
     )
 endif()
 
+# if(EMSCRIPTEN)
+# endif()
+
 if(EMSCRIPTEN)
-    set(CMAKE_EXECUTABLE_SUFFIX ".html" CACHE INTERNAL "")
+    target_link_options(${EXECUTABLE_NAME} PRIVATE
+    "-sUSE_WebGL2=1"               # Enable WebGL2 support
+    "-sALLOW_MEMORY_GROWTH=1"      # Dynamically resize memory if needed
+    )
+    set_target_properties(${EXECUTABLE_NAME} PROPERTIES 
+    SUFFIX ".html"
+)
 endif()
 
 # *** SDL y librerías relacionadas - Con fallback a FetchContent ***
@@ -153,7 +166,7 @@ set(SDLIMAGE_VENDORED ON)
 fetch_or_find(SDL3_image 3.4.4 https://github.com/libsdl-org/SDL_image.git release-3.4.4)
 
 # --- Solución para FreeType en Android ---
-if(ANDROID)
+if(ANDROID OR EMSCRIPTEN)
     message(STATUS "Android detectado: Descargando FreeType desde código fuente...")
 
     # Desactivamos dependencias extra de FreeType para que compile directo y sin errores
@@ -165,7 +178,7 @@ if(ANDROID)
 
     FetchContent_Declare(freetype
         GIT_REPOSITORY https://github.com/freetype/freetype.git
-        GIT_TAG VER-2-13-2 # Versión estable
+        GIT_TAG VER-2-14-3
         GIT_SHALLOW ON
     )
     FetchContent_MakeAvailable(freetype)
@@ -231,8 +244,10 @@ endif()
 if (EMSCRIPTEN)
     file(GLOB ASSET_FILES RELATIVE "${ASSETS_DIR}" CONFIGURE_DEPENDS "${ASSETS_DIR}/*")
     foreach(ASSET_FILE IN LISTS ASSET_FILES)
-        get_filename_component(FILENAME ${ASSET_FILE} NAME)
-        target_link_options(${EXECUTABLE_NAME} PRIVATE "--preload-file=${ASSETS_DIR}/${FILENAME}")
+        # Using the @ syntax maps the absolute host path to the virtual "assets/..." path
+        target_link_options(${EXECUTABLE_NAME} PRIVATE 
+            "--preload-file=${ASSETS_DIR}/${ASSET_FILE}@assets/${ASSET_FILE}"
+        )
     endforeach()
 endif()
 
