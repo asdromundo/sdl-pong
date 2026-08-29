@@ -65,6 +65,7 @@ private:
     SDL_FRect messageDest{};
     // RmlUi
     Rml::ElementDocument *doc{nullptr};
+    Rml::EventListener *menuListener = nullptr;
 
     bool LoadImageTexture(const std::string &path);
     bool LoadMusic(const std::string &path);

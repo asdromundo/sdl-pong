@@ -67,10 +67,6 @@ inline SDL_AppResult HandleScreenEvents(SDL_Event *event, core::scene::Manager *
     {
         SDL_LogDebug(SDL_LOG_PRIORITY_TRACE, "Event Handled: START_GAME");
         SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Starting with %d mode", (game::mode::Mode)(event->user.code));
-        auto menu = std::make_unique<GameScene>(
-            app,
-            static_cast<game::mode::Mode>(event->user.code));
-
         const bool ok = sceneManager->RegisterAndInitScene(std::make_unique<GameScene>(
             app,
             static_cast<game::mode::Mode>(event->user.code)));

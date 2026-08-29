@@ -54,11 +54,11 @@
 
             #hint {
                 position: absolute;
-                bottom: 1.5vh;
+                bottom: 2vh;
                 left: 0;
                 width: 100%;
                 text-align: center;
-                font-size: 0.55em;
+                font-size: 1.1em;
                 opacity: 0.55;
             }
 
@@ -88,7 +88,8 @@
                 }
 
                 #hint {
-                    font-size: 0.5em;
+                    font-size: 1em;
+                    padding: 0.7em 0;
                 }
             }
         </style>
@@ -99,6 +100,9 @@
         <button id="solo">SOLO</button>
         <button id="single">SINGLE PLAYER</button>
         <button id="two">TWO PLAYERS</button>
-        <div id="hint">W/S OR ARROWS TO MOVE | ESC TO QUIT</div>
+        <div id="hint">
+            <p><strong>W/S OR ARROWS TO MOVE | ESC TO QUIT<br /></strong></p>
+            <p>@asdromundo 2026. MIT License</p>
+        </div>
     </body>
 </rml>

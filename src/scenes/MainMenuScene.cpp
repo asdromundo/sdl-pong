@@ -101,23 +101,26 @@ void MainMenuScene::OnEnter()
         Rml::Element *btn_solo = doc->GetElementById("solo");
         Rml::Element *btn_single = doc->GetElementById("single");
         Rml::Element *btn_two = doc->GetElementById("two");
-        RmlUiEventListener *listener = new RmlUiEventListener(this);
+        if (!menuListener)
+        {
+            menuListener = new RmlUiEventListener(this);
+        }
         if (btn_solo)
         {
             btn_solo->Focus();
             btn_solo->SetPseudoClass("focus-visible", true);
-            btn_solo->AddEventListener("click", listener);
-            btn_solo->AddEventListener("focus", listener);
+            btn_solo->AddEventListener("click", menuListener);
+            btn_solo->AddEventListener("focus", menuListener);
         }
         if (btn_single)
         {
-            btn_single->AddEventListener("click", listener);
-            btn_single->AddEventListener("focus", listener);
+            btn_single->AddEventListener("click", menuListener);
+            btn_single->AddEventListener("focus", menuListener);
         }
         if (btn_two)
         {
-            btn_two->AddEventListener("click", listener);
-            btn_two->AddEventListener("focus", listener);
+            btn_two->AddEventListener("click", menuListener);
+            btn_two->AddEventListener("focus", menuListener);
         }
     }
 }
@@ -158,6 +161,11 @@ void MainMenuScene::CleanUp()
     {
         MIX_DestroyAudio(enterSound);
         enterSound = nullptr;
+    }
+    if (menuListener)
+    {
+        delete menuListener;
+        menuListener = nullptr;
     }
 }
 
