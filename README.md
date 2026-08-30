@@ -16,7 +16,7 @@ audio on every target.
 | --- | --- | --- |
 | Linux, macOS, Windows | tested | CMake, any generator |
 | Web (wasm) | tested | Emscripten |
-| Android | tested | Gradle project in `android-project/` |
+| Android | tested | Gradle project in `platform/android/` |
 | iOS | scaffolding only, untested | CMake bundle setup present |
 
 ## Building
@@ -29,18 +29,22 @@ and builds everything, so it is slow.
 ### Desktop (Linux / macOS / Windows)
 
 ```sh
-cmake -S . -B build
-cmake --build build
-./build/bin/<project>
+cmake --preset desktop
+cmake --build --preset desktop
+./build/desktop/bin/<project>
 ```
 
-Assets are copied to `build/bin/assets/` automatically after the build.
+Assets are copied to `build/desktop/bin/assets/` automatically after the
+build. Each preset has its own build directory (`build/desktop`,
+`build/web`, `build/android`), so targets never clobber each other. Plain
+`cmake -S . -B <dir>` works too — the presets (see `CMakePresets.json`) are
+just a consistent entry point for all targets.
 
 ### Web (Emscripten)
 
 ```sh
-emcmake cmake -S . -B web_build
-cmake --build web_build
+cmake --preset web      # needs the EMSDK environment variable
+cmake --build --preset web
 ```
 
 Produces a self-contained `.html` that preloads all of `data/assets/` into
@@ -48,21 +52,23 @@ the wasm filesystem.
 
 ### Android
 
-Open `android-project/` in Android Studio, or from that directory:
+Open `platform/android/` in Android Studio, or from that directory:
 
 ```sh
 ./gradlew assembleDebug
 ```
 
 The Gradle project points `externalNativeBuild.cmake` at the root
-`CMakeLists.txt` and sets `assets.srcDirs` to `../../data`, so the same
+`CMakeLists.txt` and sets `assets.srcDirs` to `../../../data`, so the same
 asset tree is packaged into the APK. On Android the CMake target is a shared
-library named `main`, not an executable.
+library named `main`, not an executable. (A native-only build without the
+APK is also possible: `cmake --preset android-native`.)
 
 ## Repository layout
 
 ```
 CMakeLists.txt          single build for all platforms
+CMakePresets.json       named configure/build presets (desktop, web, android)
 data/assets/            images, sounds, fonts, .rml UI documents
 src/
   main.cpp              SDL3 callback entry point (init/event/iterate/quit)
@@ -72,7 +78,7 @@ src/
   scenes/               Splash, MainMenu (RmlUi), Game (Pong)
 platform/ios/           Info.plist, launch screen, bundle icon (iOS/macOS)
 platform/windows/       resources.rc (Windows executable icon)
-android-project/        Gradle project for Android builds
+platform/android/       Gradle project for Android builds (packages the APK)
 ```
 
 ## Architecture
@@ -124,7 +130,7 @@ Rename points (the project name in CMake drives the executable/library name):
 - `project(...)` in `CMakeLists.txt`
 - Window title and icon in `src/main.cpp`
 - Bundle identifiers in `CMakeLists.txt` (iOS section)
-- `android-project/app/src/main/res/values/strings.xml` and the
+- `platform/android/app/src/main/res/values/strings.xml` and the
   `mipmap-*/ic_launcher.png` launcher icons
 - `data/assets/` — replace images, sounds, fonts and the `.rml` documents
 

@@ -1,0 +1,64 @@
+     1	--- a/app/src/main/java/org/libsdl/app/HIDDeviceManager.java
+     2	+++ b/app/src/main/java/org/libsdl/app/HIDDeviceManager.java
+     3	@@ -19,6 +19,7 @@
+     4	 import android.hardware.usb.*;
+     5	 import android.os.Handler;
+     6	 import android.os.Looper;
+     7	+import android.os.Parcelable;
+     8	 
+     9	 import java.util.ArrayList;
+    10	 import java.util.HashMap;
+    11	@@ -61,18 +62,32 @@
+    12	     private BluetoothManager mBluetoothManager;
+    13	     private List<BluetoothDevice> mLastBluetoothDevices;
+    14	 
+    15	+    /**
+    16	+     * Intent#getParcelableExtra(String) is deprecated as of API 33 in favor of the
+    17	+     * type-safe overload Intent#getParcelableExtra(String, Class). This shim uses
+    18	+     * the new API when available and falls back to the old one on older devices,
+    19	+     * so it keeps working across all API levels SDL supports.
+    20	+     */
+    21	+    @SuppressWarnings("deprecation")
+    22	+    private static <T extends Parcelable> T getParcelableExtraCompat(Intent intent, String key, Class<T> clazz) {
+    23	+        if (Build.VERSION.SDK_INT >= 33) {
+    24	+            return intent.getParcelableExtra(key, clazz);
+    25	+        }
+    26	+        return intent.getParcelableExtra(key);
+    27	+    }
+    28	+
+    29	     private final BroadcastReceiver mUsbBroadcast = new BroadcastReceiver() {
+    30	         @Override
+    31	         public void onReceive(Context context, Intent intent) {
+    32	             String action = intent.getAction();
+    33	             if (action.equals(UsbManager.ACTION_USB_DEVICE_ATTACHED)) {
+    34	-                UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+    35	+                UsbDevice usbDevice = getParcelableExtraCompat(intent, UsbManager.EXTRA_DEVICE, UsbDevice.class);
+    36	                 handleUsbDeviceAttached(usbDevice);
+    37	             } else if (action.equals(UsbManager.ACTION_USB_DEVICE_DETACHED)) {
+    38	-                UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+    39	+                UsbDevice usbDevice = getParcelableExtraCompat(intent, UsbManager.EXTRA_DEVICE, UsbDevice.class);
+    40	                 handleUsbDeviceDetached(usbDevice);
+    41	             } else if (action.equals(HIDDeviceManager.ACTION_USB_PERMISSION)) {
+    42	-                UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+    43	+                UsbDevice usbDevice = getParcelableExtraCompat(intent, UsbManager.EXTRA_DEVICE, UsbDevice.class);
+    44	                 handleUsbDevicePermission(usbDevice, intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false));
+    45	             }
+    46	         }
+    47	@@ -84,7 +99,7 @@
+    48	             String action = intent.getAction();
+    49	             // Bluetooth device was connected. If it was a Steam Controller, handle it
+    50	             if (action.equals(BluetoothDevice.ACTION_ACL_CONNECTED)) {
+    51	-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+    52	+                BluetoothDevice device = getParcelableExtraCompat(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
+    53	                 Log.d(TAG, "Bluetooth device connected: " + device);
+    54	 
+    55	                 if (isSteamController(device)) {
+    56	@@ -94,7 +109,7 @@
+    57	 
+    58	             // Bluetooth device was disconnected, remove from controller manager (if any)
+    59	             if (action.equals(BluetoothDevice.ACTION_ACL_DISCONNECTED)) {
+    60	-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+    61	+                BluetoothDevice device = getParcelableExtraCompat(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
+    62	                 Log.d(TAG, "Bluetooth device disconnected: " + device);
+    63	 
+    64	                 disconnectBluetoothDevice(device);

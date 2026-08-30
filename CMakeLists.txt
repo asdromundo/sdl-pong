@@ -111,7 +111,7 @@ function(fetch_or_find name version repo tag)
     endif()
 endfunction()
 
-fetch_or_find(SDL3 3.4.14 https://github.com/libsdl-org/SDL.git release-3.4.14)
+fetch_or_find(SDL3 3.4.14 https://github.com/libsdl-org/SDL.git 46498bc247819a2da7c1ccc7d4c4f6231076666c) # Prerelease 3.5
 
 set(SDLMIXER_MIDI_NATIVE OFF)
 set(SDLMIXER_GME OFF)
