@@ -478,13 +478,22 @@ void GameScene::CheckCollisions()
                 MIX_PlayTrack(paddleBounceTrack, 0);
             }
             // Change bounce depending on impact zone
-            const float paddleCenterY = paddle.rec.y + paddle.rec.h / 2;
-            float offset = (ball.rec.y - paddleCenterY) / (paddle.rec.h / 2); // Range: -1 to 1
+            const float paddleCenterY = paddle.rec.y + paddle.rec.h * 0.5f;
+            const float ballCenterY = ball.rec.y + ball.radius.value;
+            float offset = (ballCenterY - paddleCenterY) / (paddle.rec.h * 0.5f); // Range: -1 to 1
             offset = SDL_clamp(offset, -1.0f, 1.0f);
             // Bounce angle (-45° to 45°)
-            const float angle = offset * SDL_PI_F / 4;
-            const float direction = ball.velocity.x > 0 ? -1.0 : 1.0;
-            ball.velocity.x = SDL_cosf(angle) * direction;
+            const float angle = offset * SDL_PI_F / 4.0f;
+            if (playerIndex == 0)
+            {
+                ball.velocity.x = SDL_cosf(angle);
+                ball.rec.x = paddles[0].rec.x + paddles[0].rec.w;
+            }
+            else
+            {
+                ball.velocity.x = -SDL_cosf(angle);
+                ball.rec.x = paddles[1].rec.x - ball.rec.w;
+            }
             ball.velocity.y = SDL_sinf(angle);
             // Speed up
             ball.speed.value += ball.radius.value;
@@ -516,15 +525,19 @@ void GameScene::CheckCollisions()
     // 		audio_player.stream = pong
     // 		audio_player.play()
 
-    // World Boundaries
-    if (ball.rec.x + ball.radius.value >= lastKnownRenderSize.width)
+    // World Boundaries - Horizontal (Goals / Solo right wall)
+    if (ball.rec.x + ball.rec.w >= lastKnownRenderSize.width)
     {
         if (gameMode == game::mode::SOLO)
         {
-            ball.velocity.x *= -1;
-            if (wallBounceTrack)
+            if (ball.velocity.x > 0.0f)
             {
-                MIX_PlayTrack(wallBounceTrack, 0);
+                ball.rec.x = lastKnownRenderSize.width - ball.rec.w;
+                ball.velocity.x = -ball.velocity.x;
+                if (wallBounceTrack)
+                {
+                    MIX_PlayTrack(wallBounceTrack, 0);
+                }
             }
         }
         else
@@ -532,27 +545,26 @@ void GameScene::CheckCollisions()
             UpdateScore(0);
         }
     }
-    else if (ball.rec.x <= ball.radius.value)
+    else if (ball.rec.x <= 0.0f)
     {
         UpdateScore(1);
     }
 
-    // # World Boundaries
-    // if (Ball.position.x + radius >= viewport_bounds.x ):
-    // 	if (game_mode == game::mode.SOLO):
-    // 		ball_movement.x *= -1
-    // 		audio_player.stream = ping
-    // 		audio_player.play()
-    // 	else:
-    // 		score_goal(0)
-    // elif (Ball.position.x <= radius):
-    // 	score_goal(1)
-
-    bool outOfBoundsY = ball.rec.y + ball.radius.value >= lastKnownRenderSize.height or ball.rec.y <= ball.radius.value;
-    if (outOfBoundsY)
+    // World Boundaries - Vertical (Top / Bottom walls)
+    if (ball.rec.y <= 0.0f && ball.velocity.y < 0.0f)
     {
-        // wallSound
-        ball.velocity.y *= -1;
+        ball.rec.y = 0.0f;
+        ball.velocity.y = -ball.velocity.y;
+        ball.speed.value += ball.radius.value / 5;
+        if (wallBounceTrack)
+        {
+            MIX_PlayTrack(wallBounceTrack, 0);
+        }
+    }
+    else if (ball.rec.y + ball.rec.h >= lastKnownRenderSize.height && ball.velocity.y > 0.0f)
+    {
+        ball.rec.y = lastKnownRenderSize.height - ball.rec.h;
+        ball.velocity.y = -ball.velocity.y;
         ball.speed.value += ball.radius.value / 5;
         if (wallBounceTrack)
         {
@@ -625,8 +637,8 @@ void GameScene::adjustToScreen()
 
     ball.rec.x *= xDiff;
     ball.rec.y *= yDiff;
-    ball.rec.x = SDL_clamp(ball.rec.x, ball.radius.value, newRenderSize.width - ball.radius.value);
-    ball.rec.y = SDL_clamp(ball.rec.y, ball.radius.value, newRenderSize.height - ball.radius.value);
+    ball.rec.x = SDL_clamp(ball.rec.x, 0.0f, newRenderSize.width - ball.rec.w);
+    ball.rec.y = SDL_clamp(ball.rec.y, 0.0f, newRenderSize.height - ball.rec.h);
 
     lastKnownRenderSize = newRenderSize;
 }
