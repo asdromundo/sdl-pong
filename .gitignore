@@ -1,6 +1,3 @@
-# // TODO: Remove non open source assets
-src/assets
-
 # VS Code
 .vscode
 
@@ -76,3 +73,4 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+*.md

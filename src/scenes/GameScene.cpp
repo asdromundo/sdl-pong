@@ -62,6 +62,11 @@ void GameScene::CleanUp()
         SDL_DestroyTexture(paddleSprite);
         paddleSprite = nullptr;
     }
+    if (doc)
+    {
+        doc->Close();
+        doc = nullptr;
+    }
 }
 
 void GameScene::onSecondCounterTimer()
@@ -95,6 +100,19 @@ void GameScene::Ready()
     {
         SDL_LogDebug(SDL_LOG_PRIORITY_DEBUG, "Loaded font");
     }
+
+    // Load the document only once: Close() just moves it to the context's
+    // "unloaded_documents" until Rml::Shutdown(), so reloading it on every
+    // OnEnter would leak a full element tree per visit.
+    if (!doc)
+    {
+        doc = app->context->LoadDocument("assets/ui/game_screen.rml");
+        if (!doc)
+        {
+            SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't read RmlUi document");
+        }
+    }
+
     lastKnownRenderSize = GetCurrentRenderSize(app);
 
     ball.radius = Radius{std::min(lastKnownRenderSize.width, lastKnownRenderSize.height) / 72};
@@ -123,26 +141,23 @@ void GameScene::OnEnter()
         secondCounterTimer = SDL_AddTimer(1000, onSecondCounterTimerCallback, this);
     }
 
-    doc = app->context->LoadDocument("assets/ui/game_screen.rml");
-    if (!doc)
-    {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't read RmlUi document");
-    }
-
     UpdateScore(-1);
-    doc->Show();
+    if (doc)
+    {
+        doc->Show();
+    }
 }
 
 void GameScene::OnExit()
 {
-    if (gameMode == game::mode::SOLO)
+    if (gameMode == game::mode::SOLO && secondCounterTimer)
     {
         SDL_RemoveTimer(secondCounterTimer);
+        secondCounterTimer = 0;
     }
     if (doc)
     {
-        doc->Close(); // Esto también lo remueve del Context
-        doc = nullptr;
+        doc->Hide();
     }
 }
 
@@ -435,6 +450,8 @@ void GameScene::adjustToScreen()
 
 void GameScene::UpdateScoreDisplay()
 {
+    if (!doc)
+        return;
     Rml::Element *score_label = doc->GetElementById("score");
     if (!score_label or timeAfterGameEnded >= 0.0)
         return;
@@ -465,6 +482,8 @@ void GameScene::CheckGameOver()
     ball.rec.x = lastKnownRenderSize.width / 2;
     ball.rec.y = lastKnownRenderSize.height / 2;
 
+    if (!doc)
+        return;
     Rml::Element *score_label = doc->GetElementById("score");
     if (!score_label)
         return;

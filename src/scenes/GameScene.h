@@ -42,7 +42,7 @@ private:
     int soloScore{};
     int multiplier{};
     int winning_points{};
-    SDL_TimerID secondCounterTimer;
+    SDL_TimerID secondCounterTimer{0};
     float timeAfterGameEnded{-1.0f};
 
     // RmlUi

@@ -1,9 +1,12 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_init.h>
-// #include <SDL3_ttf/SDL_ttf.h>
 #include <SDL3_mixer/SDL_mixer.h>
 #include <SDL3_image/SDL_image.h>
+
+#ifdef __3DS__
+#include <3ds.h>
+#endif
 
 #include "scenes/ScreenManager.h"
 
@@ -36,6 +39,12 @@ SDL_AppResult SDL_Fail()
 
 SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
 {
+
+#ifdef __3DS__
+    osSetSpeedupEnable(false);
+    romfsInit();
+#endif
+
     SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "composition");
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
     // Submit click events when focusing the window.
@@ -48,9 +57,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
 
     // create a window
 
-    SDL_Window *window = SDL_CreateWindow("Pong", windowStartWidth, windowStartHeight, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    SDL_Window *window = SDL_CreateWindow("Pong", windowStartWidth, windowStartHeight, SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (not window)
     {
+        SDL_SetWindowMinimumSize(window, 320, 240);
         return SDL_Fail();
     }
 
@@ -65,7 +75,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
         SDL_Log("Failed to load icon: %s", SDL_GetError());
     }
 
-       // create a renderer
+    // create a renderer
     SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
     if (not renderer)
     {
@@ -290,6 +300,14 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 void SDL_AppQuit(void *appstate, SDL_AppResult)
 {
     auto *app = (AppContext *)appstate;
+
+    if (screenManager)
+    {
+        screenManager->CleanUp();
+        delete screenManager;
+        screenManager = nullptr;
+    }
+
     if (app)
     {
         MIX_StopAllTracks(app->mixer, 1000); // prevent the music from abruptly ending.

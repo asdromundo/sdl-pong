@@ -16,6 +16,16 @@
       }
     },
     {
+      "name": "desktop-debug",
+      "displayName": "Desktop (Debug + ASan)",
+      "description": "Debug build with AddressSanitizer. Requires the libasan runtime.",
+      "binaryDir": "${sourceDir}/build/desktop-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ASAN": "OFF"
+      }
+    },
+    {
       "name": "web",
       "displayName": "Web (Emscripten)",
       "description": "wasm build. Requires the EMSDK environment variable pointing at the Emscripten SDK root.",
@@ -26,15 +36,19 @@
       }
     },
     {
-      "name": "android-native",
-      "displayName": "Android (native only)",
-      "description": "Compiles only the native shared library, no APK. Requires the ANDROID_NDK_HOME environment variable pointing at the NDK root (ANDROID_NDK_ROOT works too if you export it). For the full APK use the Gradle project in platform/android. Other ABIs: pass -DANDROID_ABI=... with a separate build directory.",
-      "binaryDir": "${sourceDir}/build/android",
-      "toolchainFile": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+      "name": "3ds-release",
+      "displayName": "Nintendo 3DS (Release)",
+      "description": "Cross-compilation using devkitARM",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/3ds-release",
+      "environment": {
+        "DEVKITPRO": "/opt/devkitpro",
+        "DEVKITARM": "/opt/devkitpro/devkitARM",
+        "PATH": "/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$penv{PATH}"
+      },
       "cacheVariables": {
-        "ANDROID_PLATFORM": "android-30",
-        "ANDROID_STL": "c++_static",
-        "ANDROID_ABI": "arm64-v8a"
+        "CMAKE_TOOLCHAIN_FILE": "$env{DEVKITPRO}/cmake/3DS.cmake",
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ],
@@ -44,12 +58,17 @@
       "configurePreset": "desktop"
     },
     {
+      "name": "desktop-debug",
+      "configurePreset": "desktop-debug"
+    },
+    {
       "name": "web",
       "configurePreset": "web"
     },
     {
-      "name": "android-native",
-      "configurePreset": "android-native"
+      "name": "3ds-release",
+      "configurePreset": "3ds-release",
+      "displayName": "Build 3DS"
     }
   ]
 }

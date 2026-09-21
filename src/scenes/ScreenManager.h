@@ -51,15 +51,14 @@ inline SDL_AppResult HandleScreenEvents(SDL_Event *event, core::scene::Manager *
         }
         else if (currentScene == "MainMenu")
         {
+            // Teardown happens in SDL_AppQuit
             SDL_Log("Ending from Main Menu");
-            sceneManager->CleanUp();
             return SDL_APP_SUCCESS;
         }
         else
         {
             std::string err = "Scene " + sceneManager->GetCurrentSceneName() + " ended unexpectedly";
             SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s", err.c_str());
-            sceneManager->CleanUp();
             return SDL_APP_SUCCESS;
         }
     }

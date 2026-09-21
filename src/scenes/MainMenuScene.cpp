@@ -79,36 +79,26 @@ void MainMenuScene::Ready()
     {
         SDL_LogDebug(SDL_LOG_PRIORITY_DEBUG, "Loaded font");
     }
-}
 
-void MainMenuScene::OnEnter()
-{
-    if (music)
-    {
-        MIX_SetTrackAudio(musicTrack, music);
-        MIX_PlayTrack(musicTrack, -1);
-    }
-
-    doc = app->context->LoadDocument("assets/ui/main_menu_screen.rml");
+    // Load the document only once: Close() just moves it to the context's
+    // "unloaded_documents" until Rml::Shutdown(), so reloading it on every
+    // OnEnter would leak a full element tree per visit.
     if (!doc)
     {
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't read RmlUi document");
-    }
-    else
-    {
-        doc->Show();
-        // Conectar eventos a botones
+        doc = app->context->LoadDocument("assets/ui/main_menu_screen.rml");
+        if (!doc)
+        {
+            SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't read RmlUi document");
+            return;
+        }
+
+        // Conectar eventos a botones (una sola vez, con el documento)
+        menuListener = new RmlUiEventListener(this);
         Rml::Element *btn_solo = doc->GetElementById("solo");
         Rml::Element *btn_single = doc->GetElementById("single");
         Rml::Element *btn_two = doc->GetElementById("two");
-        if (!menuListener)
-        {
-            menuListener = new RmlUiEventListener(this);
-        }
         if (btn_solo)
         {
-            btn_solo->Focus();
-            btn_solo->SetPseudoClass("focus-visible", true);
             btn_solo->AddEventListener("click", menuListener);
             btn_solo->AddEventListener("focus", menuListener);
         }
@@ -125,13 +115,34 @@ void MainMenuScene::OnEnter()
     }
 }
 
+void MainMenuScene::OnEnter()
+{
+    if (music)
+    {
+        MIX_SetTrackAudio(musicTrack, music);
+        MIX_PlayTrack(musicTrack, -1);
+    }
+
+    if (doc)
+    {
+        doc->Show();
+        // Re-enfocar el botón solo al entrar de nuevo
+        if (Rml::Element *btn_solo = doc->GetElementById("solo"))
+        {
+            btn_solo->Focus();
+            btn_solo->SetPseudoClass("focus-visible", true);
+        }
+    }
+}
+
 void MainMenuScene::OnExit()
 {
     MIX_StopTrack(musicTrack, 10);
 
+    // El documento persiste: se cierra una sola vez en CleanUp()
     if (doc)
     {
-        doc->Close();
+        doc->Hide();
     }
 }
 
@@ -162,8 +173,31 @@ void MainMenuScene::CleanUp()
         MIX_DestroyAudio(enterSound);
         enterSound = nullptr;
     }
+    if (doc)
+    {
+        // Desconectar el listener de este documento antes de cerrarlo: el
+        // documento sobrevive al Close() en "unloaded_documents" del contexto
+        // hasta Rml::Shutdown(), y sus elementos conservan punteros crudos al
+        // listener. Si se liberara antes, Rml::Shutdown() llamaría OnDetach()
+        // sobre memoria ya liberada.
+        if (menuListener)
+        {
+            const char *buttonIds[] = {"solo", "single", "two"};
+            for (const char *id : buttonIds)
+            {
+                if (Rml::Element *btn = doc->GetElementById(id))
+                {
+                    btn->RemoveEventListener("click", menuListener);
+                    btn->RemoveEventListener("focus", menuListener);
+                }
+            }
+        }
+        doc->Close();
+        doc = nullptr;
+    }
     if (menuListener)
     {
+        // El listener ya fue desvinculado de los botones arriba.
         delete menuListener;
         menuListener = nullptr;
     }

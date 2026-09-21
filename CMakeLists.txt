@@ -1,7 +1,13 @@
-cmake_minimum_required(VERSION 3.22...4.2)
-project(pong)
+cmake_minimum_required(VERSION 3.22)
 
-# General setup
+set(APP_NAME "pong")
+set(APP_DISPLAY_NAME "Pong")
+set(APP_DESCRIPTION "A simple multiplatform Pong game")
+set(APP_AUTHOR "Asdrome Labs")
+
+project(${APP_NAME})
+
+# 1. General Setup
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
@@ -9,22 +15,19 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "Install path" FORCE)
 endif()
 
-if(CMAKE_TOOLCHAIN_FILE MATCHES "emscripten|Emscripten")
-    set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
-endif()
-
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "" FORCE)
 endif()
 
-if ((APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin") OR EMSCRIPTEN)
+# 3DS, Web, and certain Apple builds require strictly static builds
+if ((APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin") OR EMSCRIPTEN OR CMAKE_SYSTEM_NAME MATCHES "3DS")
     set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
-    set(SDL_SHARED OFF)
+    set(SDL_SHARED OFF CACHE INTERNAL "")
 else()
-    set(SDL_SHARED ON)
+    set(SDL_SHARED ON CACHE INTERNAL "")
 endif()
 
-# Target setup
+# 2. Target Setup
 set(EXECUTABLE_NAME ${PROJECT_NAME})
 
 if (ANDROID)
@@ -34,7 +37,7 @@ else()
     add_executable(${EXECUTABLE_NAME})
 endif()
 
-# Sources
+# 3. Sources
 set(SOURCES
     src/main.cpp
     src/core/AppContext.h
@@ -63,23 +66,21 @@ set(SOURCES
 
 if(WIN32)
     target_sources(${EXECUTABLE_NAME} PRIVATE platform/windows/resources.rc)
-endif()
-
-if(APPLE)
+elseif(APPLE)
     target_sources(${EXECUTABLE_NAME} PRIVATE platform/ios/logo.png)
 endif()
 
 target_sources(${EXECUTABLE_NAME} PRIVATE ${SOURCES})
 target_include_directories(${EXECUTABLE_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
-# Compiler options
+# 4. Compiler Options
 target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_23)
 set_target_properties(${EXECUTABLE_NAME} PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_options(${EXECUTABLE_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 
-# ASan
-set(ASAN OFF CACHE BOOL "Enable AddressSanitizer")
-if (ASAN)
+# ASan (Disabled on 3DS - unsupported by devkitARM)
+set(ASAN ON CACHE BOOL "Enable AddressSanitizer")
+if (ASAN AND NOT CMAKE_SYSTEM_NAME MATCHES "3DS")
     target_compile_options(${EXECUTABLE_NAME} PRIVATE 
         $<$<CONFIG:Debug>:-fsanitize=address -fno-omit-frame-pointer>
     )
@@ -95,12 +96,18 @@ if(EMSCRIPTEN)
     )
 endif()
 
-# Dependencies
+# 5. Dependencies (Dynamic vs Static Fetching)
 include(FetchContent)
-# Android CMake is currently 3.22, which doesn't support
-# FIND_PACKAGE_ARGS, this is a workaround for the functionality.
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Speed up reconfiguration")
+
+# Modificado para forzar la descarga estática en entornos cruzados (3DS, Android, Web)
 function(fetch_or_find name version repo tag)
-    find_package(${name} ${version} QUIET)
+    if(CMAKE_SYSTEM_NAME MATCHES "3DS" OR EMSCRIPTEN OR ANDROID)
+        set(${name}_FOUND FALSE)
+    else()
+        find_package(${name} ${version} QUIET)
+    endif()
+    
     if(NOT ${name}_FOUND)
         FetchContent_Declare(${name}
             GIT_REPOSITORY ${repo}
@@ -111,23 +118,42 @@ function(fetch_or_find name version repo tag)
     endif()
 endfunction()
 
-fetch_or_find(SDL3 3.4.14 https://github.com/libsdl-org/SDL.git 46498bc247819a2da7c1ccc7d4c4f6231076666c) # Prerelease 3.5
+fetch_or_find(SDL3 3.4.14 https://github.com/libsdl-org/SDL.git release-3.4.16)
 
-set(SDLMIXER_MIDI_NATIVE OFF)
-set(SDLMIXER_GME OFF)
-set(SDLMIXER_WAVPACK OFF)
-set(SDLMIXER_MOD OFF)
-set(SDLMIXER_OPUS OFF)
-set(SDLMIXER_FLAC OFF)
-set(SDLMIXER_VENDORED ON)
+set(SDLMIXER_MIDI_NATIVE OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_GME OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_WAVPACK OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_MOD OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_OPUS OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_FLAC OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_VENDORED ON CACHE BOOL "" FORCE)
+
+if(CMAKE_SYSTEM_NAME MATCHES "3DS" OR EMSCRIPTEN OR ANDROID)
+    set(SDLMIXER_DEPS_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_VORBIS_VORBISFILE_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_MP3_MPG123_SHARED OFF CACHE BOOL "" FORCE)
+    
+    # Prevenir el mismo problema para SDL3_image
+    set(SDLIMAGE_DEPS_SHARED OFF CACHE BOOL "" FORCE)
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "3DS")
+    set(SDLMIXER_MP3_MPG123 OFF CACHE BOOL "" FORCE)
+    set(SDLMIXER_MP3_MINIMP3 ON CACHE BOOL "" FORCE)
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "3DS" OR EMSCRIPTEN OR ANDROID)
+set(SDLIMAGE_AVIF OFF CACHE BOOL "" FORCE)
+set(SDLIMAGE_VENDORED OFF CACHE BOOL "" FORCE)
+else()
+set(SDLIMAGE_AVIF OFF CACHE BOOL "" FORCE)
+set(SDLIMAGE_VENDORED ON CACHE BOOL "" FORCE)
+endif()
 fetch_or_find(SDL3_mixer 3.2.4 https://github.com/libsdl-org/SDL_mixer.git release-3.2.4)
-
-set(SDLIMAGE_AVIF OFF)
-set(SDLIMAGE_VENDORED ON)
 fetch_or_find(SDL3_image 3.4.4 https://github.com/libsdl-org/SDL_image.git release-3.4.4)
 
-# FreeType override for Android/Web
-if(ANDROID OR EMSCRIPTEN)
+# FreeType override for constrained environments
+if(CMAKE_SYSTEM_NAME MATCHES "3DS" OR EMSCRIPTEN OR ANDROID)
     set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
     set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
     set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
@@ -154,7 +180,7 @@ endif()
 
 fetch_or_find(RmlUi 6.2 https://github.com/mikke89/RmlUi.git 6.2)
 
-# Linking
+# 6. Linking
 target_compile_definitions(${EXECUTABLE_NAME} PRIVATE RMLUI_SDL_VERSION_MAJOR=3)
 target_compile_definitions(${EXECUTABLE_NAME} PRIVATE SDL_MAIN_USE_CALLBACKS)
 
@@ -164,6 +190,10 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE
     SDL3::SDL3
     RmlUi::RmlUi
 )
+
+if (CMAKE_SYSTEM_NAME MATCHES "3DS")
+    target_link_libraries(${EXECUTABLE_NAME} PRIVATE citro3d ctru m)
+endif()
 
 if(APPLE AND NOT BUILD_SHARED_LIBS)
     find_library(IO_LIB ImageIO REQUIRED)
@@ -178,7 +208,7 @@ if(MINGW)
     target_link_options(${EXECUTABLE_NAME} PRIVATE "-mwindows")
 endif()
 
-# Assets
+# 7. Assets and Packaging
 set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/data/assets")
 set(ASSETS_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
 
@@ -198,7 +228,27 @@ if (EMSCRIPTEN)
     endforeach()
 endif()
 
-# Packaging
+# 3DS ROMFS Packaging
+if (CMAKE_SYSTEM_NAME MATCHES "3DS")
+    # En lugar de empaquetar "data/assets" como la raíz,
+    # empaquetamos el directorio de salida (bin/) para preservar la subcarpeta "assets/"
+    set(ROMFS_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    
+    set(ROMFS_FLAGS "")
+    if(EXISTS "${ROMFS_DIR}/assets")
+        set(ROMFS_FLAGS "--romfs=${ROMFS_DIR}")
+    endif()
+    
+    add_custom_command(
+        TARGET ${EXECUTABLE_NAME} POST_BUILD
+        COMMAND smdhtool --create "${APP_DISPLAY_NAME}" "${APP_DESCRIPTION}" "${APP_AUTHOR}" "${ASSETS_DIR}/pong_48x48.png" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${EXECUTABLE_NAME}.smdh"
+        
+        # El comando usa el ROMFS_DIR que contiene la carpeta 'assets'
+        COMMAND 3dsxtool $<TARGET_FILE:${EXECUTABLE_NAME}> "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${EXECUTABLE_NAME}.3dsx" ${ROMFS_FLAGS} --smdh="${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${EXECUTABLE_NAME}.smdh"
+        COMMENT "Packaging ${EXECUTABLE_NAME}.3dsx with SMDH metadata and mounting ROMFS..."
+    )
+endif()
+
 set(RESOURCE_FILES "")
 if(IOS)
     set(RESOURCE_FILES "platform/ios/iosLaunchScreen.storyboard;platform/ios/logo.png")
