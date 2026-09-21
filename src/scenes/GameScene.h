@@ -1,6 +1,7 @@
 #ifndef SCENES_GAME_SCENE_H
 #define SCENES_GAME_SCENE_H
 
+#include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
 #include <vector>
 
@@ -77,6 +78,16 @@ private:
     MIX_Track *wallBounceTrack{nullptr};
     MIX_Track *paddleBounceTrack{nullptr};
     MIX_Track *scoreTrack{nullptr};
+
+    // Touch and mouse controls
+    SDL_FingerID paddleFinger[2]{0, 0};
+    bool paddleTouchActive[2]{false, false};
+    bool mouseActive[2]{false, false};
+
+    void ProcessTouch(float normX, float normY, SDL_FingerID fingerId, bool isDown);
+    void ReleaseTouch(SDL_FingerID fingerId);
+    void ProcessMouse(float pixelX, float pixelY, bool isDown);
+    void ReleaseMouse();
 
     // Helper functions
     void ResetBall();

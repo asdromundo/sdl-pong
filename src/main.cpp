@@ -50,7 +50,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
     // Submit click events when focusing the window.
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
-    if (not SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
+    if (not SDL_Init(SDL_INIT_VIDEO))
     {
         return SDL_Fail();
     }
@@ -82,16 +82,38 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
         return SDL_Fail();
     }
 
-    // init SDL Mixer
-    auto audioDevice = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
-    if (not audioDevice or not MIX_Init())
+    // init SDL Mixer (optional)
+    SDL_AudioDeviceID audioDevice = 0;
+    MIX_Mixer *mixer = nullptr;
+
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO))
     {
-        return SDL_Fail();
+        audioDevice = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
+        if (!audioDevice)
+        {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Failed to open audio device: %s. Audio disabled.", SDL_GetError());
+        }
+        else if (!MIX_Init())
+        {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Failed to initialize SDL_mixer: %s. Audio disabled.", SDL_GetError());
+            SDL_CloseAudioDevice(audioDevice);
+            audioDevice = 0;
+        }
+        else
+        {
+            mixer = MIX_CreateMixerDevice(audioDevice, NULL);
+            if (!mixer)
+            {
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Failed to create mixer device: %s. Audio disabled.", SDL_GetError());
+                MIX_Quit();
+                SDL_CloseAudioDevice(audioDevice);
+                audioDevice = 0;
+            }
+        }
     }
-    MIX_Mixer *mixer = MIX_CreateMixerDevice(audioDevice, NULL);
-    if (not mixer)
+    else
     {
-        return SDL_Fail();
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Failed to initialize SDL audio subsystem: %s. Audio disabled.", SDL_GetError());
     }
 
     // print some information about the window
@@ -310,9 +332,17 @@ void SDL_AppQuit(void *appstate, SDL_AppResult)
 
     if (app)
     {
-        MIX_StopAllTracks(app->mixer, 1000); // prevent the music from abruptly ending.
-        MIX_DestroyMixer(app->mixer);
-        SDL_CloseAudioDevice(app->audioDevice);
+        if (app->mixer)
+        {
+            MIX_StopAllTracks(app->mixer, 1000); // prevent the music from abruptly ending.
+            MIX_DestroyMixer(app->mixer);
+            app->mixer = nullptr;
+        }
+        if (app->audioDevice)
+        {
+            SDL_CloseAudioDevice(app->audioDevice);
+            app->audioDevice = 0;
+        }
         Rml::Shutdown();
 
         SDL_Log("Closing app");

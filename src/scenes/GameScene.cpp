@@ -17,26 +17,51 @@ GameScene::~GameScene()
 
 bool GameScene::Init()
 {
-    MIX_Mixer *globalMixer = app->mixer;
-    // Load sounds and assets
-    wallBounceSound = MIX_LoadAudio(globalMixer, "assets/sounds/ping.wav", false);
-    paddleBounceSound = MIX_LoadAudio(globalMixer, "assets/sounds/pong.wav", false);
-    scoreSound = MIX_LoadAudio(globalMixer, "assets/sounds/score.wav", false);
-    wallBounceTrack = MIX_CreateTrack(app->mixer);
-    paddleBounceTrack = MIX_CreateTrack(app->mixer);
-    scoreTrack = MIX_CreateTrack(app->mixer);
-    MIX_SetTrackAudio(wallBounceTrack, wallBounceSound);
-    MIX_SetTrackAudio(paddleBounceTrack, paddleBounceSound);
-    MIX_SetTrackAudio(scoreTrack, scoreSound);
+    if (app->mixer)
+    {
+        wallBounceSound = MIX_LoadAudio(app->mixer, "assets/sounds/ping.wav", false);
+        paddleBounceSound = MIX_LoadAudio(app->mixer, "assets/sounds/pong.wav", false);
+        scoreSound = MIX_LoadAudio(app->mixer, "assets/sounds/score.wav", false);
+        wallBounceTrack = MIX_CreateTrack(app->mixer);
+        paddleBounceTrack = MIX_CreateTrack(app->mixer);
+        scoreTrack = MIX_CreateTrack(app->mixer);
+        if (wallBounceTrack && wallBounceSound)
+        {
+            MIX_SetTrackAudio(wallBounceTrack, wallBounceSound);
+        }
+        if (paddleBounceTrack && paddleBounceSound)
+        {
+            MIX_SetTrackAudio(paddleBounceTrack, paddleBounceSound);
+        }
+        if (scoreTrack && scoreSound)
+        {
+            MIX_SetTrackAudio(scoreTrack, scoreSound);
+        }
+    }
 
     ball.sprite = LoadImageTexture("assets/ball.png");
     paddleSprite = LoadImageTexture("assets/paddle.png");
 
-    return wallBounceSound && paddleBounceSound && scoreSound && ball.sprite && paddleSprite;
+    return ball.sprite && paddleSprite;
 }
 
 void GameScene::CleanUp()
 {
+    if (wallBounceTrack)
+    {
+        MIX_DestroyTrack(wallBounceTrack);
+        wallBounceTrack = nullptr;
+    }
+    if (paddleBounceTrack)
+    {
+        MIX_DestroyTrack(paddleBounceTrack);
+        paddleBounceTrack = nullptr;
+    }
+    if (scoreTrack)
+    {
+        MIX_DestroyTrack(scoreTrack);
+        scoreTrack = nullptr;
+    }
     if (wallBounceSound)
     {
         MIX_DestroyAudio(wallBounceSound);
@@ -136,6 +161,13 @@ void GameScene::OnEnter()
     scores[1] = 0;
     winning_points = 5;
 
+    paddleTouchActive[0] = false;
+    paddleTouchActive[1] = false;
+    mouseActive[0] = false;
+    mouseActive[1] = false;
+    paddles[0].direction = 0;
+    paddles[1].direction = 0;
+
     if (gameMode == game::mode::SOLO)
     {
         secondCounterTimer = SDL_AddTimer(1000, onSecondCounterTimerCallback, this);
@@ -165,10 +197,35 @@ SDL_AppResult GameScene::HandleEvent(SDL_Event *event)
 {
     switch (event->type)
     {
+    case SDL_EVENT_FINGER_DOWN:
+        ProcessTouch(event->tfinger.x, event->tfinger.y, event->tfinger.fingerID, true);
+        break;
+    case SDL_EVENT_FINGER_MOTION:
+        ProcessTouch(event->tfinger.x, event->tfinger.y, event->tfinger.fingerID, false);
+        break;
+    case SDL_EVENT_FINGER_UP:
+        ReleaseTouch(event->tfinger.fingerID);
+        break;
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        if (event->button.button == SDL_BUTTON_LEFT)
+        {
+            ProcessMouse(event->button.x, event->button.y, true);
+        }
+        break;
+    case SDL_EVENT_MOUSE_MOTION:
+        ProcessMouse(event->motion.x, event->motion.y, false);
+        break;
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+        if (event->button.button == SDL_BUTTON_LEFT)
+        {
+            ReleaseMouse();
+        }
+        break;
     case SDL_EVENT_KEY_DOWN:
         switch (event->key.scancode)
         {
         case SDL_SCANCODE_ESCAPE:
+        case SDL_SCANCODE_AC_BACK:
             core::scene::events::EmitSceneFinishedEvent(); // end the scene
             break;
         case SDL_SCANCODE_W:
@@ -314,7 +371,10 @@ void GameScene::CheckCollisions()
         Paddle paddle = paddles[playerIndex];
         if (SDL_HasRectIntersectionFloat(&ball.rec, &paddles[playerIndex].rec))
         {
-            MIX_PlayTrack(paddleBounceTrack, 0);
+            if (paddleBounceTrack)
+            {
+                MIX_PlayTrack(paddleBounceTrack, 0);
+            }
             // Change bounce depending on impact zone
             const float paddleCenterY = paddle.rec.y + paddle.rec.h / 2;
             float offset = (ball.rec.y - paddleCenterY) / (paddle.rec.h / 2); // Range: -1 to 1
@@ -360,7 +420,10 @@ void GameScene::CheckCollisions()
         if (gameMode == game::mode::SOLO)
         {
             ball.velocity.x *= -1;
-            MIX_PlayTrack(wallBounceTrack, 0);
+            if (wallBounceTrack)
+            {
+                MIX_PlayTrack(wallBounceTrack, 0);
+            }
         }
         else
         {
@@ -389,7 +452,10 @@ void GameScene::CheckCollisions()
         // wallSound
         ball.velocity.y *= -1;
         ball.speed.value += ball.radius.value / 5;
-        MIX_PlayTrack(wallBounceTrack, 0);
+        if (wallBounceTrack)
+        {
+            MIX_PlayTrack(wallBounceTrack, 0);
+        }
     }
     // var out_bounds_y : bool = Ball.position.y + radius >= viewport_bounds.y or Ball.position.y + radius <= radius
     // if(out_bounds_y):
@@ -509,7 +575,10 @@ void GameScene::UpdateScore(int scorerIndex)
     if (scorerIndex >= 0)
     {
         scores[scorerIndex]++;
-        MIX_PlayTrack(scoreTrack, 0);
+        if (scoreTrack)
+        {
+            MIX_PlayTrack(scoreTrack, 0);
+        }
         UpdateScoreDisplay();
         CheckGameOver();
     }
@@ -517,4 +586,87 @@ void GameScene::UpdateScore(int scorerIndex)
     {
         UpdateScoreDisplay();
     }
+}
+
+void GameScene::ProcessTouch(float normX, float normY, SDL_FingerID fingerId, bool isDown)
+{
+    float pixelX = normX * lastKnownRenderSize.width;
+    float pixelY = normY * lastKnownRenderSize.height;
+
+    int playerIdx = 0;
+    if (isDown)
+    {
+        if (gameMode == game::mode::TWO_PLAYERS)
+        {
+            playerIdx = (pixelX < lastKnownRenderSize.width * 0.5f) ? 0 : 1;
+        }
+        paddleFinger[playerIdx] = fingerId;
+        paddleTouchActive[playerIdx] = true;
+    }
+    else
+    {
+        // On motion: bind to whichever paddle is already tracking this finger
+        if (gameMode == game::mode::TWO_PLAYERS)
+        {
+            if (paddleTouchActive[0] && paddleFinger[0] == fingerId)
+            {
+                playerIdx = 0;
+            }
+            else if (paddleTouchActive[1] && paddleFinger[1] == fingerId)
+            {
+                playerIdx = 1;
+            }
+            else
+            {
+                playerIdx = (pixelX < lastKnownRenderSize.width * 0.5f) ? 0 : 1;
+            }
+        }
+        else
+        {
+            playerIdx = 0;
+        }
+    }
+
+    if (paddleTouchActive[playerIdx] && paddleFinger[playerIdx] == fingerId)
+    {
+        paddles[playerIdx].rec.y = pixelY - paddles[playerIdx].rec.h * 0.5f;
+        paddles[playerIdx].rec.y = SDL_clamp(paddles[playerIdx].rec.y, 0.0f, lastKnownRenderSize.height - paddles[playerIdx].rec.h);
+    }
+}
+
+void GameScene::ReleaseTouch(SDL_FingerID fingerId)
+{
+    for (int i = 0; i < 2; ++i)
+    {
+        if (paddleTouchActive[i] && paddleFinger[i] == fingerId)
+        {
+            paddleTouchActive[i] = false;
+        }
+    }
+}
+
+void GameScene::ProcessMouse(float pixelX, float pixelY, bool isDown)
+{
+    int playerIdx = 0;
+    if (gameMode == game::mode::TWO_PLAYERS)
+    {
+        playerIdx = (pixelX < lastKnownRenderSize.width * 0.5f) ? 0 : 1;
+    }
+
+    if (isDown)
+    {
+        mouseActive[playerIdx] = true;
+    }
+
+    if (mouseActive[playerIdx])
+    {
+        paddles[playerIdx].rec.y = pixelY - paddles[playerIdx].rec.h * 0.5f;
+        paddles[playerIdx].rec.y = SDL_clamp(paddles[playerIdx].rec.y, 0.0f, lastKnownRenderSize.height - paddles[playerIdx].rec.h);
+    }
+}
+
+void GameScene::ReleaseMouse()
+{
+    mouseActive[0] = false;
+    mouseActive[1] = false;
 }

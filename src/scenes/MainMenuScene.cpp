@@ -18,15 +18,21 @@ public:
         if (event.GetType() == "focus")
         {
             // Reproduce el sonido al enfocar un botón
-            MIX_SetTrackAudio(owner->track1, owner->moveSound);
-            MIX_PlayTrack(owner->track1, 0);
+            if (owner->track1 && owner->moveSound)
+            {
+                MIX_SetTrackAudio(owner->track1, owner->moveSound);
+                MIX_PlayTrack(owner->track1, 0);
+            }
             return;
         }
 
         if (event.GetType() == "click")
         {
-            MIX_SetTrackAudio(owner->track1, owner->enterSound);
-            MIX_PlayTrack(owner->track1, 0);
+            if (owner->track1 && owner->enterSound)
+            {
+                MIX_SetTrackAudio(owner->track1, owner->enterSound);
+                MIX_PlayTrack(owner->track1, 0);
+            }
             if (id == "solo")
             {
                 game::menu::EmitStartGameEvent(game::mode::SOLO);
@@ -63,11 +69,14 @@ bool MainMenuScene::Init()
         LoadImageTexture("assets/pong_logo.png");
     SDL_SetTextureScaleMode(imageTex, SDL_SCALEMODE_NEAREST);
 
-    track1 = MIX_CreateTrack(app->mixer);
-    track2 = MIX_CreateTrack(app->mixer);
-    musicTrack = MIX_CreateTrack(app->mixer);
-    moveSound = MIX_LoadAudio(app->mixer, "assets/sounds/ping.wav", false);
-    enterSound = MIX_LoadAudio(app->mixer, "assets/sounds/pong.wav", false);
+    if (app->mixer)
+    {
+        track1 = MIX_CreateTrack(app->mixer);
+        track2 = MIX_CreateTrack(app->mixer);
+        musicTrack = MIX_CreateTrack(app->mixer);
+        moveSound = MIX_LoadAudio(app->mixer, "assets/sounds/ping.wav", false);
+        enterSound = MIX_LoadAudio(app->mixer, "assets/sounds/pong.wav", false);
+    }
 
     return ok;
 }
@@ -117,7 +126,7 @@ void MainMenuScene::Ready()
 
 void MainMenuScene::OnEnter()
 {
-    if (music)
+    if (musicTrack && music)
     {
         MIX_SetTrackAudio(musicTrack, music);
         MIX_PlayTrack(musicTrack, -1);
@@ -137,7 +146,10 @@ void MainMenuScene::OnEnter()
 
 void MainMenuScene::OnExit()
 {
-    MIX_StopTrack(musicTrack, 10);
+    if (musicTrack)
+    {
+        MIX_StopTrack(musicTrack, 10);
+    }
 
     // El documento persiste: se cierra una sola vez en CleanUp()
     if (doc)
@@ -157,6 +169,21 @@ void MainMenuScene::CleanUp()
     {
         SDL_DestroyTexture(imageTex);
         imageTex = nullptr;
+    }
+    if (musicTrack)
+    {
+        MIX_DestroyTrack(musicTrack);
+        musicTrack = nullptr;
+    }
+    if (track1)
+    {
+        MIX_DestroyTrack(track1);
+        track1 = nullptr;
+    }
+    if (track2)
+    {
+        MIX_DestroyTrack(track2);
+        track2 = nullptr;
     }
     if (music)
     {
@@ -211,6 +238,7 @@ SDL_AppResult MainMenuScene::HandleEvent(SDL_Event *event)
         switch (event->key.scancode)
         {
         case SDL_SCANCODE_ESCAPE:
+        case SDL_SCANCODE_AC_BACK:
             core::scene::events::EmitSceneFinishedEvent(); // end the scene
             break;
         // case SDL_SCANCODE_UP:
@@ -300,6 +328,10 @@ bool MainMenuScene::LoadImageTexture(const std::string &path)
 
 bool MainMenuScene::LoadMusic(const std::string &path)
 {
+    if (!app->mixer)
+    {
+        return false;
+    }
     music = MIX_LoadAudio(app->mixer, path.c_str(), false);
     if (!music)
     {

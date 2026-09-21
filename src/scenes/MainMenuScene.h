@@ -54,8 +54,8 @@ public:
     void Render() override;
     MIX_Audio *moveSound{nullptr};
     MIX_Audio *enterSound{nullptr};
-    MIX_Track *track1;
-    MIX_Track *track2;
+    MIX_Track *track1{nullptr};
+    MIX_Track *track2{nullptr};
 
 private:
     SDL_Texture *messageTex{nullptr};
