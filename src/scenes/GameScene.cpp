@@ -3,8 +3,43 @@
 
 #include <SDL3_image/SDL_image.h>
 #include <RmlUi/Core/Context.h>
-#include <RmlUi/Core.h>
+#include <RmlUi/Core/EventListener.h>
 #include <format>
+
+class GamePauseEventListener : public Rml::EventListener
+{
+public:
+    explicit GamePauseEventListener(GameScene *scene) : owner(scene) {}
+    void ProcessEvent(Rml::Event &event) override
+    {
+        if (event.GetType() == "click")
+        {
+            Rml::Element *target = event.GetCurrentElement();
+            if (!target)
+                return;
+            std::string id = target->GetId().c_str();
+            if (id == "pause-btn")
+            {
+                owner->TogglePause();
+            }
+            else if (id == "btn-resume")
+            {
+                owner->ResumeGame();
+            }
+            else if (id == "btn-restart")
+            {
+                owner->RestartGame();
+            }
+            else if (id == "btn-menu")
+            {
+                core::scene::events::EmitSceneFinishedEvent();
+            }
+        }
+    }
+
+private:
+    GameScene *owner;
+};
 
 GameScene::GameScene(AppContext *context, game::mode::Mode mode) : Scene("Game", context), gameMode(mode)
 {
@@ -89,13 +124,33 @@ void GameScene::CleanUp()
     }
     if (doc)
     {
+        if (pauseListener)
+        {
+            const char *btnIds[] = {"pause-btn", "btn-resume", "btn-restart", "btn-menu"};
+            for (const char *id : btnIds)
+            {
+                if (Rml::Element *btn = doc->GetElementById(id))
+                {
+                    btn->RemoveEventListener("click", pauseListener);
+                }
+            }
+        }
         doc->Close();
         doc = nullptr;
+    }
+    if (pauseListener)
+    {
+        delete pauseListener;
+        pauseListener = nullptr;
     }
 }
 
 void GameScene::onSecondCounterTimer()
 {
+    if (isPaused)
+    {
+        return;
+    }
     gameTime++;
     multiplier = SDL_log10(gameTime) + 1;
     soloScore += 10 * multiplier;
@@ -136,6 +191,10 @@ void GameScene::Ready()
         {
             SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Couldn't read RmlUi document");
         }
+        else
+        {
+            SetupPauseMenu();
+        }
     }
 
     lastKnownRenderSize = GetCurrentRenderSize(app);
@@ -159,7 +218,13 @@ void GameScene::OnEnter()
     ResetBall();
     scores[0] = 0;
     scores[1] = 0;
+    gameTime = 0;
+    soloScore = 0;
+    multiplier = 1;
     winning_points = 5;
+    timeAfterGameEnded = -1.0f;
+    isPaused = false;
+    activeFingerCount = 0;
 
     paddleTouchActive[0] = false;
     paddleTouchActive[1] = false;
@@ -168,16 +233,22 @@ void GameScene::OnEnter()
     paddles[0].direction = 0;
     paddles[1].direction = 0;
 
+    if (doc)
+    {
+        if (Rml::Element *overlay = doc->GetElementById("pause-overlay"))
+        {
+            overlay->SetClass("hidden", true);
+            overlay->SetProperty("display", "none");
+        }
+        doc->Show();
+    }
+
     if (gameMode == game::mode::SOLO)
     {
         secondCounterTimer = SDL_AddTimer(1000, onSecondCounterTimerCallback, this);
     }
 
     UpdateScore(-1);
-    if (doc)
-    {
-        doc->Show();
-    }
 }
 
 void GameScene::OnExit()
@@ -197,23 +268,59 @@ SDL_AppResult GameScene::HandleEvent(SDL_Event *event)
 {
     switch (event->type)
     {
+    case SDL_EVENT_WILL_ENTER_BACKGROUND:
+    case SDL_EVENT_DID_ENTER_BACKGROUND:
+    case SDL_EVENT_WINDOW_FOCUS_LOST:
+    case SDL_EVENT_WINDOW_OCCLUDED:
+        PauseGame();
+        break;
+
+    case SDL_EVENT_WINDOW_RESTORED:
+    case SDL_EVENT_WINDOW_RESIZED:
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+    case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
+    case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+        adjustToScreen();
+        break;
+
     case SDL_EVENT_FINGER_DOWN:
-        ProcessTouch(event->tfinger.x, event->tfinger.y, event->tfinger.fingerID, true);
+        activeFingerCount++;
+        // Gesto de 2 dedos simultáneos: alternar pausa
+        if (activeFingerCount == 2)
+        {
+            TogglePause();
+            break;
+        }
+        if (!isPaused)
+        {
+            ProcessTouch(event->tfinger.x, event->tfinger.y, event->tfinger.fingerID, true);
+        }
         break;
     case SDL_EVENT_FINGER_MOTION:
-        ProcessTouch(event->tfinger.x, event->tfinger.y, event->tfinger.fingerID, false);
+        if (!isPaused)
+        {
+            ProcessTouch(event->tfinger.x, event->tfinger.y, event->tfinger.fingerID, false);
+        }
         break;
     case SDL_EVENT_FINGER_UP:
+        if (activeFingerCount > 0)
+        {
+            activeFingerCount--;
+        }
         ReleaseTouch(event->tfinger.fingerID);
         break;
+
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        if (event->button.button == SDL_BUTTON_LEFT)
+        if (!isPaused && event->button.button == SDL_BUTTON_LEFT)
         {
             ProcessMouse(event->button.x, event->button.y, true);
         }
         break;
     case SDL_EVENT_MOUSE_MOTION:
-        ProcessMouse(event->motion.x, event->motion.y, false);
+        if (!isPaused)
+        {
+            ProcessMouse(event->motion.x, event->motion.y, false);
+        }
         break;
     case SDL_EVENT_MOUSE_BUTTON_UP:
         if (event->button.button == SDL_BUTTON_LEFT)
@@ -221,29 +328,41 @@ SDL_AppResult GameScene::HandleEvent(SDL_Event *event)
             ReleaseMouse();
         }
         break;
+
     case SDL_EVENT_KEY_DOWN:
         switch (event->key.scancode)
         {
         case SDL_SCANCODE_ESCAPE:
         case SDL_SCANCODE_AC_BACK:
-            core::scene::events::EmitSceneFinishedEvent(); // end the scene
+            TogglePause();
+            break;
+        case SDL_SCANCODE_P:
+            TogglePause();
             break;
         case SDL_SCANCODE_W:
-            paddles[0].direction = -1;
+            if (!isPaused)
+                paddles[0].direction = -1;
             break;
         case SDL_SCANCODE_S:
-            paddles[0].direction = 1;
+            if (!isPaused)
+                paddles[0].direction = 1;
             break;
         case SDL_SCANCODE_UP:
         {
-            const int playerIndex = gameMode == game::mode::TWO_PLAYERS ? 1 : 0;
-            paddles[playerIndex].direction = -1;
+            if (!isPaused)
+            {
+                const int playerIndex = gameMode == game::mode::TWO_PLAYERS ? 1 : 0;
+                paddles[playerIndex].direction = -1;
+            }
             break;
         }
         case SDL_SCANCODE_DOWN:
         {
-            const int playerIndex = gameMode == game::mode::TWO_PLAYERS ? 1 : 0;
-            paddles[playerIndex].direction = 1;
+            if (!isPaused)
+            {
+                const int playerIndex = gameMode == game::mode::TWO_PLAYERS ? 1 : 0;
+                paddles[playerIndex].direction = 1;
+            }
             break;
         }
         default:
@@ -268,10 +387,6 @@ SDL_AppResult GameScene::HandleEvent(SDL_Event *event)
             break;
         }
         break;
-    case SDL_EVENT_WINDOW_RESTORED:
-    case SDL_EVENT_WINDOW_RESIZED:
-        adjustToScreen();
-        break;
     default:
         break;
     }
@@ -280,6 +395,11 @@ SDL_AppResult GameScene::HandleEvent(SDL_Event *event)
 
 void GameScene::Update(float deltatime)
 {
+    if (isPaused)
+    {
+        return;
+    }
+
     if (timeAfterGameEnded >= 0.0)
     { // If our counter has started
         timeAfterGameEnded += deltatime;
@@ -490,27 +610,42 @@ SDL_Texture *GameScene::LoadImageTexture(const std::string &path)
 void GameScene::adjustToScreen()
 {
     Size2D newRenderSize = GetCurrentRenderSize(app);
+    if (newRenderSize.width <= 0.0f || newRenderSize.height <= 0.0f)
+    {
+        return;
+    }
     float xDiff = newRenderSize.width / lastKnownRenderSize.width;
     float yDiff = newRenderSize.height / lastKnownRenderSize.height;
-    initialSpeed *= xDiff;
+
+    initialSpeed = newRenderSize.width / 3;
     ball.speed.value *= xDiff;
     paddles[0].speed.value *= yDiff;
     paddles[1].speed.value *= yDiff;
-    ball.radius = Radius{std::min(lastKnownRenderSize.width, lastKnownRenderSize.height) / 72};
+
+    ball.radius = Radius{std::min(newRenderSize.width, newRenderSize.height) / 72};
     ball.rec.w = ball.radius.value * 2;
     ball.rec.h = ball.radius.value * 2;
+
     paddles[0].rec.w = ball.radius.value;
     paddles[0].rec.h = ball.radius.value * 8;
+    paddles[0].rec.x = ball.radius.value;
     paddles[0].rec.y *= yDiff;
+    paddles[0].rec.y = SDL_clamp(paddles[0].rec.y, 0.0f, newRenderSize.height - paddles[0].rec.h);
+
     if (gameMode != game::mode::SOLO)
     {
         paddles[1].rec.w = ball.radius.value;
         paddles[1].rec.h = ball.radius.value * 8;
-        paddles[1].rec.x *= xDiff;
+        paddles[1].rec.x = newRenderSize.width - 2 * ball.radius.value;
         paddles[1].rec.y *= yDiff;
+        paddles[1].rec.y = SDL_clamp(paddles[1].rec.y, 0.0f, newRenderSize.height - paddles[1].rec.h);
     }
+
     ball.rec.x *= xDiff;
     ball.rec.y *= yDiff;
+    ball.rec.x = SDL_clamp(ball.rec.x, ball.radius.value, newRenderSize.width - ball.radius.value);
+    ball.rec.y = SDL_clamp(ball.rec.y, ball.radius.value, newRenderSize.height - ball.radius.value);
+
     lastKnownRenderSize = newRenderSize;
 }
 
@@ -669,4 +804,97 @@ void GameScene::ReleaseMouse()
 {
     mouseActive[0] = false;
     mouseActive[1] = false;
+}
+
+void GameScene::SetupPauseMenu()
+{
+    if (!doc)
+        return;
+    if (!pauseListener)
+    {
+        pauseListener = new GamePauseEventListener(this);
+    }
+    const char *btnIds[] = {"pause-btn", "btn-resume", "btn-restart", "btn-menu"};
+    for (const char *id : btnIds)
+    {
+        if (Rml::Element *btn = doc->GetElementById(id))
+        {
+            btn->AddEventListener("click", pauseListener);
+        }
+    }
+}
+
+void GameScene::PauseGame()
+{
+    if (isPaused || timeAfterGameEnded >= 0.0f)
+    {
+        return;
+    }
+    isPaused = true;
+    paddleTouchActive[0] = false;
+    paddleTouchActive[1] = false;
+    mouseActive[0] = false;
+    mouseActive[1] = false;
+    paddles[0].direction = 0;
+    paddles[1].direction = 0;
+
+    if (doc)
+    {
+        if (Rml::Element *overlay = doc->GetElementById("pause-overlay"))
+        {
+            overlay->SetClass("hidden", false);
+            overlay->SetProperty("display", "flex");
+        }
+        if (Rml::Element *btnResume = doc->GetElementById("btn-resume"))
+        {
+            btnResume->Focus();
+        }
+    }
+}
+
+void GameScene::ResumeGame()
+{
+    if (!isPaused)
+    {
+        return;
+    }
+    isPaused = false;
+    paddleTouchActive[0] = false;
+    paddleTouchActive[1] = false;
+    mouseActive[0] = false;
+    mouseActive[1] = false;
+
+    if (doc)
+    {
+        if (Rml::Element *overlay = doc->GetElementById("pause-overlay"))
+        {
+            overlay->SetClass("hidden", true);
+            overlay->SetProperty("display", "none");
+        }
+    }
+}
+
+void GameScene::TogglePause()
+{
+    if (isPaused)
+    {
+        ResumeGame();
+    }
+    else
+    {
+        PauseGame();
+    }
+}
+
+void GameScene::RestartGame()
+{
+    ResumeGame();
+    scores[0] = 0;
+    scores[1] = 0;
+    gameTime = 0;
+    soloScore = 0;
+    multiplier = 1;
+    timeAfterGameEnded = -1.0f;
+    ResetBall();
+    UpdateScore(-1);
 }

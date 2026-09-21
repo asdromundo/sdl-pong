@@ -50,6 +50,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
     // Submit click events when focusing the window.
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
     if (not SDL_Init(SDL_INIT_VIDEO))
     {
         return SDL_Fail();
@@ -57,7 +58,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
 
     // create a window
 
-    SDL_Window *window = SDL_CreateWindow("Pong", windowStartWidth, windowStartHeight, SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    SDL_WindowFlags windowFlags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#if defined(__ANDROID__)
+    windowFlags |= SDL_WINDOW_FULLSCREEN;
+#endif
+
+    SDL_Window *window = SDL_CreateWindow("Pong", windowStartWidth, windowStartHeight, windowFlags);
     if (not window)
     {
         SDL_SetWindowMinimumSize(window, 320, 240);
@@ -200,6 +206,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     case SDL_EVENT_WINDOW_RESTORED:
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
     case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+    case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
     {
         int fb_w, fb_h;
         SDL_GetCurrentRenderOutputSize(app->renderer, &fb_w, &fb_h);

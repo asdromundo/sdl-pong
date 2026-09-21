@@ -4,33 +4,140 @@
         <title>Game</title>
         <style>
             body {
+                box-sizing: border-box;
                 width: 100%;
                 height: 100%;
                 font-family: "Pixel Operator 8";
                 color: #ffffff;
             }
 
-            #score {
+            #hud {
                 position: absolute;
-                top: 2.5vh;
+                top: 0;
                 left: 0;
                 width: 100%;
-                text-align: center;
-                font-size: 3.2vh;
-                letter-spacing: 0.1em;
+                height: 10vh;
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
             }
 
-            /* Keep the HUD legible and out of the way on tall/narrow viewports. */
+            #score {
+                font-size: 3.2vh;
+                letter-spacing: 0.1em;
+                text-align: center;
+            }
+
+            #pause-btn {
+                position: absolute;
+                top: 2vh;
+                right: 3vw;
+                background-color: transparent;
+                border: 0.15em #ffffff;
+                color: #ffffff;
+                font-size: 1.8vh;
+                padding: 0.4em 0.8em;
+                cursor: pointer;
+            }
+
+            #pause-btn:hover,
+            #pause-btn:focus,
+            #pause-btn:active {
+                background-color: #ffffff;
+                color: #0c0c0c;
+            }
+
+            /* Pause Overlay Modal */
+            #pause-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(12, 12, 12, 0.85);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 10;
+            }
+
+            #pause-overlay.hidden,
+            .hidden {
+                display: none;
+            }
+
+            #pause-box {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 80%;
+                max-width: 18em;
+            }
+
+            #pause-title {
+                font-size: 4vh;
+                letter-spacing: 0.2em;
+                margin-bottom: 3vh;
+                text-align: center;
+            }
+
+            .menu-btn {
+                box-sizing: border-box;
+                display: block;
+                width: 100%;
+                margin: 0.8vh 0;
+                padding: 1.2vh 0;
+                font-size: 2vh;
+                text-align: center;
+                background-color: transparent;
+                border: 0.12em #ffffff;
+                color: #ffffff;
+                cursor: pointer;
+            }
+
+            .menu-btn:hover,
+            .menu-btn:focus,
+            .menu-btn:active {
+                background-color: #ffffff;
+                color: #0c0c0c;
+            }
+
             @media (max-aspect-ratio: 3 / 4) {
                 #score {
-                    top: 1.5vh;
                     font-size: 2.6vh;
+                }
+
+                #pause-btn {
+                    top: 1.5vh;
+                    right: 2vw;
+                    font-size: 1.5vh;
+                }
+
+                #pause-title {
+                    font-size: 3.2vh;
+                }
+
+                .menu-btn {
+                    font-size: 1.8vh;
                 }
             }
         </style>
     </head>
 
     <body>
-        <div id="score">00 | 00</div>
+        <div id="hud">
+            <div id="score">00 | 00</div>
+            <button id="pause-btn">||</button>
+        </div>
+        <div id="pause-overlay" class="hidden">
+            <div id="pause-box">
+                <div id="pause-title">PAUSED</div>
+                <button class="menu-btn" id="btn-resume">RESUME</button>
+                <button class="menu-btn" id="btn-restart">RESTART</button>
+                <button class="menu-btn" id="btn-menu">MAIN MENU</button>
+            </div>
+        </div>
     </body>
 </rml>

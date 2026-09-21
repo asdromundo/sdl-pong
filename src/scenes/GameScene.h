@@ -31,7 +31,14 @@ public:
 
     void onSecondCounterTimer();
 
+    void PauseGame();
+    void ResumeGame();
+    void TogglePause();
+    void RestartGame();
+
 private:
+    friend class GamePauseEventListener;
+
     // Game constants
     game::mode::Mode gameMode;
 
@@ -48,6 +55,13 @@ private:
 
     // RmlUi
     Rml::ElementDocument *doc{nullptr};
+    Rml::EventListener *pauseListener{nullptr};
+
+    // Pause state
+    bool isPaused{false};
+    int activeFingerCount{0};
+
+    void SetupPauseMenu();
 
     // Components
     struct Ball
