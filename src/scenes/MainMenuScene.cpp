@@ -83,12 +83,6 @@ bool MainMenuScene::Init()
 
 void MainMenuScene::Ready()
 {
-    // Fonts should be loaded before any documents are loaded.
-    if (Rml::LoadFontFace("assets/PixelOperator8.ttf"))
-    {
-        SDL_LogDebug(SDL_LOG_PRIORITY_DEBUG, "Loaded font");
-    }
-
     // Load the document only once: Close() just moves it to the context's
     // "unloaded_documents" until Rml::Shutdown(), so reloading it on every
     // OnEnter would leak a full element tree per visit.

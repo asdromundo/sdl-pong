@@ -168,6 +168,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
     }
     // Now we can initialize RmlUi.
     Rml::Initialise();
+    if (!Rml::LoadFontFace("assets/PixelOperator8.ttf", true))
+    {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Failed to load default font face: assets/PixelOperator8.ttf");
+    }
 
     display_scale = SDL_GetWindowDisplayScale(window);
     int bbwidth, bbheight;

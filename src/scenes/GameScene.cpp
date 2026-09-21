@@ -175,12 +175,6 @@ static Size2D GetCurrentRenderSize(const AppContext *app)
 
 void GameScene::Ready()
 {
-    // Fonts should be loaded before any documents are loaded.
-    if (Rml::LoadFontFace("assets/PixelOperator8.ttf"))
-    {
-        SDL_LogDebug(SDL_LOG_PRIORITY_DEBUG, "Loaded font");
-    }
-
     // Load the document only once: Close() just moves it to the context's
     // "unloaded_documents" until Rml::Shutdown(), so reloading it on every
     // OnEnter would leak a full element tree per visit.
@@ -224,7 +218,6 @@ void GameScene::OnEnter()
     winning_points = 5;
     timeAfterGameEnded = -1.0f;
     isPaused = false;
-    activeFingerCount = 0;
 
     paddleTouchActive[0] = false;
     paddleTouchActive[1] = false;
@@ -284,13 +277,6 @@ SDL_AppResult GameScene::HandleEvent(SDL_Event *event)
         break;
 
     case SDL_EVENT_FINGER_DOWN:
-        activeFingerCount++;
-        // Gesto de 2 dedos simultáneos: alternar pausa
-        if (activeFingerCount == 2)
-        {
-            TogglePause();
-            break;
-        }
         if (!isPaused)
         {
             ProcessTouch(event->tfinger.x, event->tfinger.y, event->tfinger.fingerID, true);
@@ -303,10 +289,6 @@ SDL_AppResult GameScene::HandleEvent(SDL_Event *event)
         }
         break;
     case SDL_EVENT_FINGER_UP:
-        if (activeFingerCount > 0)
-        {
-            activeFingerCount--;
-        }
         ReleaseTouch(event->tfinger.fingerID);
         break;
 

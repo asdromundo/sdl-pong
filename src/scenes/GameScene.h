@@ -59,7 +59,6 @@ private:
 
     // Pause state
     bool isPaused{false};
-    int activeFingerCount{0};
 
     void SetupPauseMenu();
 
