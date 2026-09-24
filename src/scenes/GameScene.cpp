@@ -157,15 +157,6 @@ void GameScene::onSecondCounterTimer()
     UpdateScore(-1);
 }
 
-/// This keeps track of the time
-/// This static calls the other one
-static Uint32 onSecondCounterTimerCallback(void *userdata, SDL_TimerID, Uint32 interval)
-{
-    GameScene *instance = static_cast<GameScene *>(userdata);
-    instance->onSecondCounterTimer();
-    return interval;
-}
-
 static Size2D GetCurrentRenderSize(const AppContext *app)
 {
     int w, h;
@@ -238,7 +229,7 @@ void GameScene::OnEnter()
 
     if (gameMode == game::mode::SOLO)
     {
-        secondCounterTimer = SDL_AddTimer(1000, onSecondCounterTimerCallback, this);
+        soloScoreTimer = 0.0f;
     }
 
     UpdateScore(-1);
@@ -246,11 +237,6 @@ void GameScene::OnEnter()
 
 void GameScene::OnExit()
 {
-    if (gameMode == game::mode::SOLO && secondCounterTimer)
-    {
-        SDL_RemoveTimer(secondCounterTimer);
-        secondCounterTimer = 0;
-    }
     if (doc)
     {
         doc->Hide();
@@ -380,6 +366,16 @@ void GameScene::Update(float deltatime)
     if (isPaused)
     {
         return;
+    }
+
+    if (gameMode == game::mode::SOLO)
+    {
+        soloScoreTimer += deltatime;
+        while (soloScoreTimer >= 1.0f)
+        {
+            soloScoreTimer -= 1.0f;
+            onSecondCounterTimer();
+        }
     }
 
     if (timeAfterGameEnded >= 0.0)

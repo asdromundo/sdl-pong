@@ -50,7 +50,7 @@ private:
     int soloScore{};
     int multiplier{};
     int winning_points{};
-    SDL_TimerID secondCounterTimer{0};
+    float soloScoreTimer{0.0f};
     float timeAfterGameEnded{-1.0f};
 
     // RmlUi

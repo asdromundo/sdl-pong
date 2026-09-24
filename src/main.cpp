@@ -43,6 +43,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
 #ifdef __3DS__
     osSetSpeedupEnable(false);
     romfsInit();
+    SDL_SetHint(SDL_HINT_MAIN_CALLBACK_RATE, "60");
 #endif
 
     SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "composition");
@@ -196,6 +197,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int, char *[])
 
     screenManager = new core::scene::Manager{};
     InitScreenManager(screenManager, (AppContext *)*appstate);
+
+    lastTick = SDL_GetTicks();
+    currentTick = lastTick;
 
     return SDL_APP_CONTINUE;
 }

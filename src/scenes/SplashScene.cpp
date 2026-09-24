@@ -25,15 +25,22 @@ void SplashScene::Ready()
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "Splash scene ready.");
 }
 
-static Uint32 SceneFinishedTimerCallback(void *, SDL_TimerID, Uint32)
+void SplashScene::FinishScene()
 {
-    // Return whether the signal was emited or not
-    core::scene::events::EmitSceneFinishedEvent();
-    return 0;
+    if (!finished)
+    {
+        finished = true;
+        core::scene::events::EmitSceneFinishedEvent();
+    }
 }
 
 void SplashScene::RenderLogo()
 {
+    if (!logoTexture)
+    {
+        return;
+    }
+
     // Clean background color
     SDL_SetRenderDrawColor(app->renderer, 36, 18, 36, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(app->renderer);
@@ -47,38 +54,50 @@ void SplashScene::RenderLogo()
 
     // Actualizar el rendering target
     SDL_RenderPresent(app->renderer);
-
-    // End scene after timer
-    SDL_AddTimer(200, SceneFinishedTimerCallback, nullptr);
 }
 
 void SplashScene::OnEnter()
-{ // Solo renderizamos la textura si está cargada
-    if (logoTexture)
-    {
-        RenderLogo();
-    }
+{
+    elapsedTime = 0.0f;
+    finished = false;
+    RenderLogo();
 }
 
 SDL_AppResult SplashScene::HandleEvent(SDL_Event *event)
 {
-    if (logoTexture)
+    switch (event->type)
     {
-        if (event->type == SDL_EVENT_WINDOW_RESIZED)
-        {
-            RenderLogo();
-            return SDL_APP_CONTINUE;
-        }
+    case SDL_EVENT_KEY_DOWN:
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+    case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
+    case SDL_EVENT_FINGER_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        FinishScene();
+        return SDL_APP_CONTINUE;
+    case SDL_EVENT_WINDOW_RESIZED:
+        RenderLogo();
+        return SDL_APP_CONTINUE;
+    default:
+        break;
     }
     return SDL_APP_CONTINUE;
 }
 
-void SplashScene::Update(float)
+void SplashScene::Update(float deltaTime)
 {
+    if (!finished)
+    {
+        elapsedTime += deltaTime;
+        if (elapsedTime >= SPLASH_DURATION)
+        {
+            FinishScene();
+        }
+    }
 }
 
 void SplashScene::Render()
 {
+    RenderLogo();
 }
 
 void SplashScene::OnExit()

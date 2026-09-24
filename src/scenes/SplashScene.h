@@ -25,9 +25,13 @@ public:
 
 private:
     SDL_Texture *logoTexture{nullptr};
+    float elapsedTime{0.0f};
+    bool finished{false};
+    static constexpr float SPLASH_DURATION = 1.0f;
 
     bool LoadImageTexture(const std::string &path);
     void RenderLogo();
+    void FinishScene();
 };
 
 #endif // SCENES_SPLASH_SCENE_H
